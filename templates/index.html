@@ -1,0 +1,2589 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SNS AI 자동 발행 시스템 | 소상공인 올인원 마케팅 툴</title>
+  <meta name="description" content="주제 입력 또는 영상 업로드만으로 인스타그램, 틱톡, 당근마켓, 블로그 원고와 영상을 AI가 자동 생성·발행합니다." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── CSS 변수 & 리셋 ────────────────────────────────────── */
+    :root {
+      --bg-deep:        #0a0a14;
+      --bg-card:        rgba(255,255,255,0.05);
+      --bg-card-hover:  rgba(255,255,255,0.08);
+      --border:         rgba(255,255,255,0.1);
+      --border-glow:    rgba(139,92,246,0.4);
+
+      --accent-violet:  #8b5cf6;
+      --accent-pink:    #ec4899;
+      --accent-cyan:    #06b6d4;
+      --accent-green:   #10b981;
+
+      --text-primary:   #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted:     #475569;
+
+      --gradient-main:  linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #06b6d4 100%);
+      --gradient-card:  linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(236,72,153,0.10) 100%);
+
+      --shadow-glow:    0 0 40px rgba(139,92,246,0.25);
+      --shadow-card:    0 8px 32px rgba(0,0,0,0.4);
+
+      --radius-lg:      16px;
+      --radius-md:      10px;
+      --radius-sm:      6px;
+
+      --transition:     all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Noto Sans KR', 'Outfit', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── 배경 그라디언트 애니메이션 ───────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 10% 10%, rgba(139,92,246,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 90% 80%, rgba(236,72,153,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(6,182,212,0.06) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── 레이아웃 ───────────────────────────────────────────── */
+    .app-wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ─── 헤더 ───────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 0 32px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-logo {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      background: var(--gradient-main);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      box-shadow: var(--shadow-glow);
+    }
+
+    .header-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      background: var(--gradient-main);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      font-weight: 400;
+    }
+
+    .header-badge {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(139,92,246,0.15);
+      border: 1px solid rgba(139,92,246,0.3);
+      color: var(--accent-violet);
+      font-weight: 500;
+    }
+
+    /* ─── 섹션 타이틀 ────────────────────────────────────────── */
+    .section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ─── 카드 ───────────────────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      backdrop-filter: blur(20px);
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255,255,255,0.15);
+    }
+
+    /* ─── 메인 그리드 ────────────────────────────────────────── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 32px;
+    }
+
+    .left-panel { grid-column: 1; }
+    .right-panel { grid-column: 2; }
+
+    /* ─── 플랫폼 선택 탭 ────────────────────────────────────── */
+    .platform-tabs {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .platform-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 8px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .platform-tab:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255,255,255,0.2);
+      transform: translateY(-2px);
+    }
+
+    .platform-tab.active {
+      border-color: var(--accent-violet);
+      background: rgba(139,92,246,0.15);
+      color: var(--text-primary);
+      box-shadow: 0 0 20px rgba(139,92,246,0.2);
+    }
+
+    .platform-tab .platform-icon {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .platform-tab.instagram.active { border-color: #e1306c; background: rgba(225,48,108,0.1); }
+    .platform-tab.tiktok.active    { border-color: #69c9d0; background: rgba(105,201,208,0.1); }
+
+    .platform-tab.blog.active      { border-color: #03c75a; background: rgba(3,199,90,0.1); }
+    .platform-tab.facebook.active  { border-color: #1877F2; background: rgba(24,119,242,0.1); }
+    .platform-tab.x_twitter.active { border-color: #ffffff; background: rgba(255,255,255,0.1); }
+    .platform-tab.threads.active   { border-color: #a3a3a3; background: rgba(255,255,255,0.15); box-shadow: 0 0 10px rgba(255,255,255,0.1); }
+
+    /* ─── Hero & FAQ Section ─────────────────────────────────── */
+    .hero {
+      text-align: center;
+      padding: 50px 20px 30px;
+    }
+    .hero-title {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      background: var(--gradient-main);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+    .hero-subtitle {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    
+    .faq-section {
+      margin-top: 60px;
+      padding: 40px;
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+    }
+    .faq-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      text-align: center;
+      color: var(--text-primary);
+    }
+    .faq-item {
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      padding-bottom: 12px;
+    }
+    .faq-question {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+    }
+    .faq-question:hover { color: var(--accent-violet); }
+    .faq-answer {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      display: none;
+      padding-bottom: 8px;
+    }
+    .faq-item.active .faq-answer {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ─── 입력 폼 ────────────────────────────────────────────── */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .form-label-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(139,92,246,0.15);
+      color: var(--accent-violet);
+    }
+
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.3);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      transition: var(--transition);
+      outline: none;
+    }
+
+    .form-input::placeholder, .form-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--accent-violet);
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
+      background: rgba(0,0,0,0.4);
+    }
+
+    .form-select option { background: #1a1a2e; }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ─── 파일 업로드 드롭존 ─────────────────────────────────── */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dropzone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--gradient-card);
+      opacity: 0;
+      transition: var(--transition);
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--accent-violet);
+      transform: scale(1.01);
+    }
+
+    .dropzone:hover::before, .dropzone.dragover::before {
+      opacity: 1;
+    }
+
+    .dropzone.dragover {
+      box-shadow: var(--shadow-glow);
+    }
+
+    .dropzone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .dropzone-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      display: block;
+      transition: var(--transition);
+    }
+
+    .dropzone:hover .dropzone-icon { transform: scale(1.1) rotate(-5deg); }
+
+    .dropzone-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .dropzone-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .dropzone-preview {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dropzone-preview.visible { display: flex; }
+
+    .dropzone-preview video {
+      width: 100%;
+      max-height: 160px;
+      border-radius: var(--radius-sm);
+      object-fit: contain;
+    }
+
+    .dropzone-filename {
+      font-size: 12px;
+      color: var(--accent-violet);
+      font-weight: 500;
+      padding: 4px 12px;
+      background: rgba(139,92,246,0.1);
+      border-radius: 20px;
+    }
+
+    /* ─── 생성 버튼 ──────────────────────────────────────────── */
+    .btn-generate {
+      width: 100%;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: var(--gradient-main);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .btn-generate::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0);
+      transition: var(--transition);
+    }
+
+    .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(139,92,246,0.5); }
+    .btn-generate:hover::after { background: rgba(255,255,255,0.1); }
+    .btn-generate:active { transform: translateY(0); }
+
+    .btn-generate.loading {
+      pointer-events: none;
+      opacity: 0.8;
+    }
+
+    /* ─── 로딩 스피너 ────────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── 에디터 패널 ────────────────────────────────────────── */
+    .editor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .editor-title {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .editor-platform-badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      background: rgba(139,92,246,0.2);
+      color: var(--accent-violet);
+      font-weight: 500;
+    }
+
+    .editor-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-sm {
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+    }
+
+    .btn-sm:hover {
+      border-color: rgba(255,255,255,0.2);
+      color: var(--text-primary);
+      background: var(--bg-card-hover);
+    }
+
+    .btn-sm.primary {
+      border-color: var(--accent-violet);
+      color: var(--accent-violet);
+      background: rgba(139,92,246,0.1);
+    }
+
+    .btn-sm.primary:hover {
+      background: rgba(139,92,246,0.2);
+    }
+
+    /* ─── 에디터 텍스트 영역 ─────────────────────────────────── */
+    .editor-area {
+      width: 100%;
+      min-height: 240px;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.3);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: 'Noto Sans KR', sans-serif;
+      line-height: 1.7;
+      resize: vertical;
+      transition: var(--transition);
+      outline: none;
+    }
+
+    .editor-area:focus {
+      border-color: var(--accent-violet);
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
+    }
+
+    .editor-area.typing-effect {
+      animation: blink-border 0.5s ease infinite alternate;
+    }
+
+    @keyframes blink-border {
+      from { border-color: var(--accent-violet); }
+      to   { border-color: rgba(139,92,246,0.3); }
+    }
+
+    /* ─── 글자수 카운터 ──────────────────────────────────────── */
+    .char-counter {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .char-counter .count {
+      font-weight: 600;
+      color: var(--accent-violet);
+    }
+
+    .char-counter.warning .count { color: #f59e0b; }
+    .char-counter.danger .count  { color: #ef4444; }
+
+    /* ─── 해시태그 영역 ──────────────────────────────────────── */
+    .hashtag-area {
+      margin-top: 16px;
+    }
+
+    .hashtag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      padding: 12px;
+      background: rgba(0,0,0,0.2);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      min-height: 60px;
+    }
+
+    .hashtag-chip {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      background: rgba(139,92,246,0.1);
+      border: 1px solid rgba(139,92,246,0.2);
+      color: var(--accent-violet);
+      cursor: pointer;
+      transition: var(--transition);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .hashtag-chip:hover {
+      background: rgba(139,92,246,0.2);
+      transform: scale(1.05);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* ─── BGM 패널 ───────────────────────────────────────────── */
+    .bgm-panel {
+      margin-top: 20px;
+    }
+
+    .bgm-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .bgm-item {
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .bgm-item:hover { background: var(--bg-card-hover); border-color: rgba(255,255,255,0.2); }
+
+    .bgm-item.selected {
+      border-color: var(--accent-cyan);
+      background: rgba(6,182,212,0.1);
+      color: var(--accent-cyan);
+    }
+
+    .bgm-item .bgm-emoji { font-size: 16px; }
+
+    .bgm-volume {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .bgm-volume input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent-violet);
+      height: 4px;
+    }
+
+    /* ─── 예약 발행 영역 ─────────────────────────────────────── */
+    .schedule-area {
+      margin-top: 20px;
+    }
+
+    .schedule-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .btn-schedule {
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--accent-green);
+      background: rgba(16,185,129,0.1);
+      color: var(--accent-green);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+      font-family: inherit;
+    }
+
+    .btn-schedule:hover {
+      background: rgba(16,185,129,0.2);
+      box-shadow: 0 0 20px rgba(16,185,129,0.2);
+    }
+
+    /* ─── 예약 게시물 목록 ───────────────────────────────────── */
+    .schedule-list {
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .schedule-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+      background: var(--bg-card);
+      font-size: 12px;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .schedule-status {
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .status-pending   { background: rgba(245,158,11,0.15); color: #f59e0b; }
+    .status-published { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+    .status-failed    { background: rgba(239,68,68,0.15);  color: #ef4444; }
+
+    /* ─── 토스트 알림 ─────────────────────────────────────────── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 500;
+      min-width: 240px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      backdrop-filter: blur(20px);
+      animation: toastIn 0.3s ease;
+      box-shadow: var(--shadow-card);
+    }
+
+    .toast.success { background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; }
+    .toast.error   { background: rgba(239,68,68,0.2);  border: 1px solid rgba(239,68,68,0.3);  color: #fca5a5; }
+    .toast.info    { background: rgba(139,92,246,0.2); border: 1px solid rgba(139,92,246,0.3); color: #c4b5fd; }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ─── 진행률 바 ──────────────────────────────────────────── */
+    .progress-bar-wrap {
+      display: none;
+      margin-top: 12px;
+    }
+
+    .progress-bar-wrap.visible { display: block; }
+
+    .progress-bar-track {
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--gradient-main);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.4s ease;
+      animation: shimmer 1.5s infinite;
+      background-size: 200% 100%;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .progress-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* ─── 이미지 설명 입력 (Vision API 대신) ─────────────────── */
+    .photo-desc-area {
+      display: none;
+      margin-top: 12px;
+    }
+
+    .photo-desc-area.visible { display: block; }
+
+    /* ─── 반응형 ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+      .left-panel, .right-panel { grid-column: 1; }
+      .platform-tabs { grid-template-columns: repeat(2, 1fr); }
+      .schedule-row { grid-template-columns: 1fr 1fr; }
+      .schedule-row .btn-schedule { grid-column: 1 / -1; }
+      .bgm-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 480px) {
+      .app-wrapper { padding: 0 16px 60px; }
+      .form-row { grid-template-columns: 1fr; }
+      .editor-actions { gap: 4px; }
+      .btn-sm { padding: 5px 10px; font-size: 11px; }
+    }
+
+    /* ─── 스크롤바 ───────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+
+    /* ─── 기타 유틸 ──────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+
+    .text-muted { color: var(--text-muted); font-size: 12px; }
+    .text-accent { color: var(--accent-violet); font-weight: 600; }
+
+    .empty-state {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .empty-state .empty-icon { font-size: 32px; display: block; margin-bottom: 8px; opacity: 0.5; }
+
+    /* ─── 소셜 프루프 배너 (Vrew 벤치마킹) ─────────────────── */
+    .social-proof-bar {
+      background: linear-gradient(90deg, rgba(139,92,246,0.08) 0%, rgba(6,182,212,0.08) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 24px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .social-proof-track {
+      display: flex;
+      gap: 48px;
+      animation: marquee 30s linear infinite;
+      white-space: nowrap;
+      width: max-content;
+    }
+
+    .social-proof-bar:hover .social-proof-track { animation-play-state: paused; }
+
+    @keyframes marquee {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    .proof-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .proof-item strong { color: var(--accent-violet); font-weight: 600; }
+    .proof-item .proof-star { color: #f59e0b; font-size: 11px; }
+
+    /* ─── 업종별 프리셋 퀵버튼 (Wrtn 벤치마킹) ─────────────── */
+    .preset-section {
+      margin-bottom: 16px;
+    }
+
+    .preset-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .preset-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .preset-chip {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .preset-chip:hover {
+      border-color: var(--accent-violet);
+      color: var(--accent-violet);
+      background: rgba(139,92,246,0.08);
+      transform: translateY(-1px);
+    }
+
+    .preset-chip.active {
+      border-color: var(--accent-violet);
+      color: var(--accent-violet);
+      background: rgba(139,92,246,0.15);
+    }
+
+    /* ─── 흐름 시각화 바 (VideoStew 벤치마킹) ──────────────── */
+    .flow-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 14px 0;
+      margin-bottom: 20px;
+      background: rgba(0,0,0,0.2);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      flex-wrap: wrap;
+      row-gap: 8px;
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .flow-step .flow-icon { font-size: 16px; }
+    .flow-step .flow-text { font-weight: 500; }
+
+    .flow-arrow {
+      color: var(--text-muted);
+      font-size: 14px;
+      opacity: 0.5;
+    }
+
+    .flow-step.highlight .flow-icon,
+    .flow-step.highlight .flow-text {
+      color: var(--accent-violet);
+    }
+
+    /* ─── 템플릿 카드 섹션 (CapCut 벤치마킹) ────────────────── */
+    .template-section {
+      margin-bottom: 28px;
+    }
+
+    .template-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .template-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .template-see-all {
+      font-size: 11px;
+      color: var(--accent-violet);
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: inherit;
+      padding: 0;
+    }
+
+    .template-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .template-card {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      cursor: pointer;
+      transition: var(--transition);
+      background: var(--bg-card);
+      position: relative;
+    }
+
+    .template-card:hover {
+      border-color: var(--accent-violet);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(139,92,246,0.2);
+    }
+
+    .template-card-thumb {
+      width: 100%;
+      aspect-ratio: 9/16;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .template-card:hover .template-card-thumb {
+      transform: scale(1.08);
+    }
+
+    .template-card-info {
+      padding: 8px 10px;
+    }
+
+    .template-card-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .template-card-platform {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .template-card-badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      background: rgba(16,185,129,0.2);
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    /* ─── 3단계 진행 상태바 ──────────────────────────────────── */
+    .step-progress {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 20px 0 28px;
+      position: relative;
+    }
+
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-circle {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--bg-card);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      transition: var(--transition);
+      backdrop-filter: blur(10px);
+    }
+
+    .step-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      white-space: nowrap;
+      transition: var(--transition);
+    }
+
+    .step-connector {
+      width: 80px;
+      height: 2px;
+      background: var(--border);
+      margin-bottom: 24px;
+      transition: var(--transition);
+    }
+
+    .step-item.active .step-circle {
+      border-color: var(--accent-violet);
+      background: rgba(139,92,246,0.2);
+      box-shadow: 0 0 16px rgba(139,92,246,0.4);
+    }
+
+    .step-item.active .step-label {
+      color: var(--accent-violet);
+      font-weight: 700;
+    }
+
+    .step-item.done .step-circle {
+      border-color: var(--accent-green);
+      background: rgba(16,185,129,0.2);
+    }
+
+    .step-item.done .step-label { color: var(--accent-green); }
+
+    .step-connector.done { background: var(--accent-green); }
+    .step-connector.active { background: linear-gradient(90deg, var(--accent-green), var(--accent-violet)); }
+
+    /* ─── 자막 설정 패널 ─────────────────────────────────────── */
+    .subtitle-panel {
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(0,0,0,0.2);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+    }
+
+    .subtitle-panel-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .subtitle-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .subtitle-item label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    .subtitle-item select,
+    .subtitle-item input[type="color"] {
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.3);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .subtitle-item select:focus {
+      border-color: var(--accent-violet);
+    }
+
+    .subtitle-item input[type="color"] {
+      padding: 3px 6px;
+      height: 34px;
+    }
+
+    /* ─── 해시태그 active 상태 ───────────────────────────────── */
+    .hashtag-chip.selected {
+      background: rgba(16,185,129,0.2);
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      transform: scale(1.05);
+    }
+
+    .hashtag-chip.selected::before {
+      content: '✓ ';
+      font-size: 10px;
+    }
+
+    /* ─── 예약 목록 삭제 버튼 ────────────────────────────────── */
+    .btn-delete-schedule {
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(239,68,68,0.3);
+      background: rgba(239,68,68,0.1);
+      color: #ef4444;
+      font-size: 11px;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn-delete-schedule:hover {
+      background: rgba(239,68,68,0.25);
+    }
+
+    /* ─── 텍스트 다운로드 버튼 ───────────────────────────────── */
+    .btn-download {
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(6,182,212,0.3);
+      background: rgba(6,182,212,0.1);
+      color: var(--accent-cyan);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+    }
+
+    .btn-download:hover {
+      background: rgba(6,182,212,0.2);
+      box-shadow: 0 0 12px rgba(6,182,212,0.2);
+    }
+
+    /* ─── 모달 (수익화 시뮬레이션) ────────────────────────────── */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999; opacity: 0; visibility: hidden; transition: var(--transition);
+    }
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+    .modal-content {
+      background: var(--bg-deep); border: 1px solid var(--accent-violet);
+      border-radius: var(--radius-lg); padding: 32px; width: 90%; max-width: 500px;
+      box-shadow: 0 0 40px rgba(139,92,246,0.4); text-align: center;
+      transform: translateY(20px) scale(0.95); transition: var(--transition);
+    }
+    .modal-overlay.active .modal-content { transform: translateY(0) scale(1); }
+    .pricing-tier {
+      background: rgba(139,92,246,0.1); border: 1px solid var(--accent-violet);
+      padding: 24px; border-radius: var(--radius-md); margin-top: 20px;
+    }
+    .pricing-price { font-size: 32px; font-weight: 700; color: #fff; margin: 12px 0; }
+    .btn-upgrade {
+      width: 100%; padding: 14px; background: var(--gradient-main);
+      border: none; border-radius: var(--radius-md); color: #fff;
+      font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 16px;
+    }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px; background: none; border: none;
+      color: var(--text-muted); font-size: 24px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── 소셜 프루프 마퀴 배너 (Vrew 후기 배너 벤치마킹) ── -->
+<div class="social-proof-bar" aria-label="사용자 후기">
+  <div class="social-proof-track" id="proofTrack">
+    <span class="proof-item"><span class="proof-star">★★★★★</span> <strong>카페 사장님</strong> — 매일 인스타 올리는 게 너무 귀찮았는데 이거 쓰고 나서 30분이 5분으로 줄었어요!</span>
+    <span class="proof-item">⚡ <strong>월 비용 $1</strong> 이하로 운영 가능한 유일한 소상공인 SNS 자동화 툴</span>
+    <span class="proof-item"><span class="proof-star">★★★★★</span> <strong>헬스장 운영자</strong> — 영상 편집을 하나도 몰랐는데 사진만 올리면 릴스가 만들어지니까 대박이에요</span>
+    <span class="proof-item">🚀 <strong>비전 API 없음</strong> = 영상 처리 비용 0원! 국내 최저가 구조</span>
+    <span class="proof-item"><span class="proof-star">★★★★★</span> <strong>베이커리 사장님</strong> — 당근마켓, 인스타, 블로그 세 곳을 동시에 올려주니까 시간이 엄청 절약돼요</span>
+    <span class="proof-item">🎵 BGM + 자막 + 해시태그 — 세 가지를 한 번에, 버튼 하나로</span>
+    <!-- 무한루프를 위해 동일 항목 반복 -->
+    <span class="proof-item"><span class="proof-star">★★★★★</span> <strong>카페 사장님</strong> — 매일 인스타 올리는 게 너무 귀찮았는데 이거 쓰고 나서 30분이 5분으로 줄었어요!</span>
+    <span class="proof-item">⚡ <strong>월 비용 $1</strong> 이하로 운영 가능한 유일한 소상공인 SNS 자동화 툴</span>
+    <span class="proof-item"><span class="proof-star">★★★★★</span> <strong>헬스장 운영자</strong> — 영상 편집을 하나도 몰랐는데 사진만 올리면 릴스가 만들어지니까 대박이에요</span>
+    <span class="proof-item">🚀 <strong>비전 API 없음</strong> = 영상 처리 비용 0원! 국내 최저가 구조</span>
+    <span class="proof-item"><span class="proof-star">★★★★★</span> <strong>베이커리 사장님</strong> — 당근마켓, 인스타, 블로그 세 곳을 동시에 올려주니까 시간이 엄청 절약돼요</span>
+    <span class="proof-item">🎵 BGM + 자막 + 해시태그 — 세 가지를 한 번에, 버튼 하나로</span>
+  </div>
+</div>
+
+<div class="app-wrapper">
+
+  <!-- ─── 헤더 ────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-brand">
+      <div class="header-logo">🚀</div>
+      <div>
+        <div class="header-title">AutoPost AI (오토포스트 AI)</div>
+        <div class="header-subtitle">단 한 번의 클릭으로 7개 SNS 통합 관리 · 소상공인 초저비용 솔루션</div>
+      </div>
+    </div>
+    <div class="header-badge">Beta v1.0</div>
+  </header>
+
+  <!-- ─── Hero Section (오토케 벤치마킹) ────────────────────── -->
+  <section class="hero">
+    <h1 class="hero-title">사진 한 장 올리면 7개 SNS에 동시 발행 끝!</h1>
+    <p class="hero-subtitle">
+      복잡한 영상 편집, 대본 작성, 해시태그 고민은 이제 그만하세요.<br>
+      클릭 몇 번이면 AI가 맞춤형 원고와 영상을 만들고, 인스타·틱톡·페이스북 등에 예약 발행까지 책임집니다.
+    </p>
+  </section>
+
+  <!-- ─── 3단계 진행 상태바 ────────────────────────────────── -->
+  <nav class="step-progress" id="stepProgress" aria-label="작업 진행 단계">
+    <div class="step-item active" id="step1" data-step="1">
+      <div class="step-circle">1️⃣</div>
+      <span class="step-label">입력</span>
+    </div>
+    <div class="step-connector" id="connector1"></div>
+    <div class="step-item" id="step2" data-step="2">
+      <div class="step-circle">2️⃣</div>
+      <span class="step-label">AI 편집</span>
+    </div>
+    <div class="step-connector" id="connector2"></div>
+    <div class="step-item" id="step3" data-step="3">
+      <div class="step-circle">3️⃣</div>
+      <span class="step-label">예약발행</span>
+    </div>
+  </nav>
+
+  <!-- ─── 흐름 시각화 바 (VideoStew 벤치마킹) ─────────────── -->
+  <div class="flow-bar" aria-label="작업 흐름 안내">
+    <div class="flow-step highlight">
+      <span class="flow-icon">📸</span>
+      <span class="flow-text">사진/영상 업로드</span>
+    </div>
+    <span class="flow-arrow">›</span>
+    <div class="flow-step highlight">
+      <span class="flow-icon">✏️</span>
+      <span class="flow-text">주제 한 줄 입력</span>
+    </div>
+    <span class="flow-arrow">›</span>
+    <div class="flow-step">
+      <span class="flow-icon">🤖</span>
+      <span class="flow-text">AI 원고 자동 생성</span>
+    </div>
+    <span class="flow-arrow">›</span>
+    <div class="flow-step">
+      <span class="flow-icon">🎬</span>
+      <span class="flow-text">FFmpeg 영상 결합</span>
+    </div>
+    <span class="flow-arrow">›</span>
+    <div class="flow-step">
+      <span class="flow-icon">📥</span>
+      <span class="flow-text">MP4 다운로드</span>
+    </div>
+    <span class="flow-arrow">›</span>
+    <div class="flow-step">
+      <span class="flow-icon">📅</span>
+      <span class="flow-text">예약 발행</span>
+    </div>
+  </div>
+
+  <!-- ─── 숏폼 템플릿 카드 (CapCut 벤치마킹) ──────────────── -->
+  <div class="template-section">
+    <div class="template-section-header">
+      <div class="template-section-title">🎨 업종별 빠른 시작 템플릿</div>
+      <button class="template-see-all" onclick="showToast('더 많은 템플릿은 Week 6 업데이트에서 제공됩니다!', 'info')">더 보기 →</button>
+    </div>
+    <div class="template-grid" id="templateGrid">
+      <div class="template-card" onclick="applyTemplate('cafe')" title="카페 신메뉴 홍보 템플릿">
+        <div class="template-card-thumb" style="background: linear-gradient(135deg, #6f4e37, #c8a97e);">☕</div>
+        <div class="template-card-badge">인기</div>
+        <div class="template-card-info">
+          <div class="template-card-name">카페 신메뉴</div>
+          <div class="template-card-platform">인스타 · 블로그</div>
+        </div>
+      </div>
+      <div class="template-card" onclick="applyTemplate('sale')" title="할인 이벤트 템플릿">
+        <div class="template-card-thumb" style="background: linear-gradient(135deg, #e11d48, #f97316);">🏷️</div>
+        <div class="template-card-info">
+          <div class="template-card-name">할인 이벤트</div>
+          <div class="template-card-platform">틱톡 · 인스타</div>
+        </div>
+      </div>
+      <div class="template-card" onclick="applyTemplate('beauty')" title="뷰티/미용실 홍보 템플릿">
+        <div class="template-card-thumb" style="background: linear-gradient(135deg, #7c3aed, #db2777);">💇</div>
+        <div class="template-card-info">
+          <div class="template-card-name">뷰티 / 미용</div>
+          <div class="template-card-platform">인스타 · 블로그</div>
+        </div>
+      </div>
+      <div class="template-card" onclick="applyTemplate('food')" title="음식점/배달 홍보 템플릿">
+        <div class="template-card-thumb" style="background: linear-gradient(135deg, #065f46, #d97706);">🍽️</div>
+        <div class="template-card-badge">NEW</div>
+        <div class="template-card-info">
+          <div class="template-card-name">맛집 / 식당</div>
+          <div class="template-card-platform">블로그 · 트위터</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- ════════════════════════════════════════════════
+         왼쪽 패널: 입력 & 설정
+    ════════════════════════════════════════════════ -->
+    <div class="left-panel">
+
+      <!-- 플랫폼 선택 -->
+      <p class="section-title">📱 플랫폼 선택</p>
+      <div class="platform-tabs" id="platformTabs">
+        <button class="platform-tab instagram active" data-platform="instagram" id="tab-instagram">
+          <span class="platform-icon">📸</span>
+          <span>인스타그램</span>
+        </button>
+        <button class="platform-tab tiktok" data-platform="tiktok" id="tab-tiktok">
+          <span class="platform-icon">🎵</span>
+          <span>틱톡</span>
+        </button>
+
+        <button class="platform-tab blog" data-platform="naver_blog" id="tab-naver_blog">
+          <span class="platform-icon">📝</span>
+          <span>블로그</span>
+        </button>
+        <button class="platform-tab facebook" data-platform="facebook" id="tab-facebook">
+          <span class="platform-icon">📘</span>
+          <span>페이스북</span>
+        </button>
+        <button class="platform-tab x_twitter" data-platform="x_twitter" id="tab-x_twitter">
+          <span class="platform-icon">🐦</span>
+          <span>X(트위터)</span>
+        </button>
+        <button class="platform-tab threads" data-platform="threads" id="tab-threads">
+          <span class="platform-icon">🧵</span>
+          <span>스레드</span>
+        </button>
+      </div>
+
+      <!-- 업종별 프리셋 퀵버튼 (Wrtn 벤치마킹) -->
+      <div class="preset-section">
+        <div class="preset-label">⚡ 빠른 주제 채우기</div>
+        <div class="preset-chips" id="presetChips">
+          <button class="preset-chip" onclick="applyPreset('신메뉴 출시 이벤트! 오늘 하루만 20% 할인, 많이 와주세요 🎉')">📢 신메뉴 출시</button>
+          <button class="preset-chip" onclick="applyPreset('주말 특별 할인 행사! 한정 수량이라 서두르세요 ⏰')">🏷️ 할인 이벤트</button>
+          <button class="preset-chip" onclick="applyPreset('오늘의 추천 메뉴를 소개합니다. 직접 만든 수제 음식이에요 🍴')">🍴 오늘의 메뉴</button>
+          <button class="preset-chip" onclick="applyPreset('봄 시즌 한정 메뉴가 나왔어요! 놓치지 마세요 🌸')">🌸 시즌 메뉴</button>
+          <button class="preset-chip" onclick="applyPreset('단골 고객 감사 이벤트! 10번 방문 시 서비스 제공합니다 💛')">💛 단골 감사</button>
+          <button class="preset-chip" onclick="applyPreset('가게 오픈 준비 중! 곧 여러분을 만나겠습니다 🚪')">🚪 오픈 예정</button>
+        </div>
+      </div>
+
+      <!-- 기본 정보 카드 -->
+      <div class="card" style="margin-bottom: 20px;">
+        <p class="section-title">✏️ 주제 입력</p>
+
+        <div class="form-group">
+          <label class="form-label" for="topicInput">
+            게시물 주제 / 내용
+            <span class="form-label-badge">필수</span>
+          </label>
+          <textarea
+            class="form-textarea"
+            id="topicInput"
+            rows="3"
+            placeholder="예) 오늘 신메뉴 아메리카노 출시! 런치 타임 2천원 할인 이벤트 진행합니다."
+          ></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="businessType">업종</label>
+            <select class="form-select" id="businessType">
+              <option value="카페">☕ 카페</option>
+              <option value="음식점">🍽️ 음식점</option>
+              <option value="미용실">💇 미용실</option>
+              <option value="헬스장">💪 헬스장 / 운동시설</option>
+              <option value="베이커리">🥐 베이커리</option>
+              <option value="옷가게">👗 패션 / 의류</option>
+              <option value="네일샵">💅 네일 / 뷰티</option>
+              <option value="학원">📚 학원 / 교육</option>
+              <option value="기타">📦 기타</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="locationInput">지역</label>
+            <input
+              type="text"
+              class="form-input"
+              id="locationInput"
+              placeholder="예) 강남구, 부산 해운대"
+              value="서울"
+            />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="toneInput">톤앤매너</label>
+            <select class="form-select" id="toneInput">
+              <option value="친근한">😊 친근한</option>
+              <option value="전문적인">💼 전문적인</option>
+              <option value="유머러스한">😆 유머러스한</option>
+              <option value="감성적인">✨ 감성적인</option>
+              <option value="MZ세대">😎 MZ세대 트렌디</option>
+              <option value="정중한">🙏 정중한</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 미디어 업로드 카드 -->
+      <div class="card" style="margin-bottom: 20px;">
+        <p class="section-title">📁 미디어 업로드 (선택)</p>
+
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="fileInput" accept="video/*,image/*" />
+          <div id="dropzoneDefault">
+            <span class="dropzone-icon">🎬</span>
+            <p class="dropzone-text">영상 또는 사진을 드래그하거나 클릭하세요</p>
+            <p class="dropzone-hint">MP4, MOV, AVI, JPG, PNG 지원 · 최대 200MB</p>
+          </div>
+          <div class="dropzone-preview" id="dropzonePreview">
+            <video id="previewVideo" controls muted playsinline style="display:none"></video>
+            <img id="previewImage" style="display:none; max-height:140px; border-radius:8px;" />
+            <span class="dropzone-filename" id="previewFilename"></span>
+          </div>
+        </div>
+
+        <!-- 사진 업로드 시: 설명 입력 (Vision API 대신) -->
+        <div class="photo-desc-area" id="photoDescArea">
+          <div class="form-group" style="margin-top:12px; margin-bottom:0">
+            <label class="form-label" for="photoDesc">
+              📷 사진 내용 설명
+              <span class="form-label-badge">Vision API 대신 직접 입력</span>
+            </label>
+            <textarea
+              class="form-textarea"
+              id="photoDesc"
+              rows="2"
+              placeholder="사진에 보이는 것을 설명해주세요. 예) 카운터 위에 아이스 아메리카노 2잔, 배경은 우드 인테리어"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- STT 옵션 (영상 업로드 시) -->
+        <div id="sttOption" style="display:none; margin-top:12px;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-secondary); cursor:pointer;">
+            <input type="checkbox" id="runSTT" style="accent-color:var(--accent-violet);" />
+            <span>🎙️ 영상 음성에서 자동으로 텍스트 추출 (Whisper STT 실행)</span>
+          </label>
+        </div>
+
+        <!-- 업로드 진행률 -->
+        <div class="progress-bar-wrap" id="uploadProgress">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="uploadProgressFill"></div>
+          </div>
+          <p class="progress-label" id="uploadProgressLabel">업로드 중...</p>
+        </div>
+      </div>
+
+      <!-- BGM 선택 카드 -->
+      <div class="card" style="margin-bottom: 20px;">
+        <p class="section-title">🎵 BGM 선택 (선택)</p>
+
+        <div class="bgm-grid">
+          <button class="bgm-item" data-bgm="none" onclick="selectBGM(this, 'none')">
+            <span class="bgm-emoji">🔇</span> BGM 없음
+          </button>
+          <button class="bgm-item" data-bgm="upbeat/bgm_01" onclick="selectBGM(this, 'upbeat/bgm_01')">
+            <span class="bgm-emoji">☀️</span> 활기찬
+          </button>
+          <button class="bgm-item" data-bgm="upbeat/bgm_02" onclick="selectBGM(this, 'upbeat/bgm_02')">
+            <span class="bgm-emoji">🎉</span> 신나는
+          </button>
+          <button class="bgm-item" data-bgm="calm/bgm_04" onclick="selectBGM(this, 'calm/bgm_04')">
+            <span class="bgm-emoji">🌊</span> 잔잔한
+          </button>
+          <button class="bgm-item" data-bgm="calm/bgm_05" onclick="selectBGM(this, 'calm/bgm_05')">
+            <span class="bgm-emoji">🌙</span> 로파이
+          </button>
+          <button class="bgm-item" data-bgm="seasonal/bgm_06" onclick="selectBGM(this, 'seasonal/bgm_06')">
+            <span class="bgm-emoji">🌸</span> 계절감
+          </button>
+        </div>
+
+        <div class="bgm-volume">
+          <span>🔈</span>
+          <input type="range" id="bgmVolume" min="0" max="100" value="30" />
+          <span id="bgmVolumeLabel">30%</span>
+          <span>🔊</span>
+        </div>
+      </div>
+
+      <!-- 생성 버튼 -->
+      <button class="btn-generate" id="generateBtn" onclick="generateContent()">
+        ✨ AI 원고 자동 생성
+      </button>
+
+    </div><!-- /left-panel -->
+
+
+    <!-- ════════════════════════════════════════════════
+         오른쪽 패널: 에디터 & 발행
+    ════════════════════════════════════════════════ -->
+    <div class="right-panel">
+
+      <!-- 에디터 카드 -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="editor-header">
+          <div class="editor-title">
+            📄 원고 에디터
+            <span class="editor-platform-badge" id="platformBadge">인스타그램</span>
+          </div>
+          <div class="editor-actions">
+            <button class="btn-sm" onclick="restoreOriginal()" title="원문 복구" id="restoreBtn" disabled>↩️ 복구</button>
+            <button class="btn-sm" onclick="regenerateContent()" title="재생성" id="regenBtn" disabled>🔄 재생성</button>
+            <button class="btn-sm primary" onclick="copyToClipboard()" title="복사" id="copyBtn">📋 복사</button>
+            <button class="btn-download" onclick="downloadText()" title="텍스트 파일 다운로드" id="downloadBtn">⬇️ TXT</button>
+          </div>
+        </div>
+
+        <textarea
+          class="editor-area"
+          id="editorArea"
+          placeholder="왼쪽에서 주제를 입력하고 'AI 원고 자동 생성' 버튼을 클릭하면 여기에 원고가 자동으로 생성됩니다.
+
+직접 입력하거나 생성된 원고를 자유롭게 수정할 수도 있어요!"
+        ></textarea>
+
+        <div class="char-counter" id="charCounter">
+          글자 수: <span class="count" id="charCount">0</span>
+          <span id="charLimit"></span>
+        </div>
+
+        <!-- 해시태그 -->
+        <div class="hashtag-area" id="hashtagArea" style="display:none;">
+          <div class="section-title">🏷️ 추천 해시태그</div>
+          <div class="hashtag-list" id="hashtagList">
+            <div class="empty-state"><span class="empty-icon">🏷️</span>해시태그가 여기에 생성됩니다</div>
+          </div>
+          <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-sm" onclick="copyHashtags()">📋 해시태그 복사</button>
+            <button class="btn-sm" onclick="resetHashtags()" style="border-color:rgba(255,255,255,0.15);">↩️ 선택 초기화</button>
+            <p class="text-muted" style="align-self:center; margin:0;">클릭 시 에디터에 추가 / 다시 클릭 시 해제</p>
+          </div>
+        </div>
+
+        <!-- 자막 설정 (캡컷 스타일) -->
+        <div class="subtitle-panel" id="subtitlePanel">
+          <div class="subtitle-panel-title">🎬 자막 설정 (영상 합성 시 적용)</div>
+          <div class="subtitle-grid">
+            <div class="subtitle-item">
+              <label for="subtitleFont">📝 폰트</label>
+              <select id="subtitleFont">
+                <option value="NanumGothic">나눔고딕</option>
+                <option value="NanumBarunGothic">나눔바른고딕</option>
+                <option value="Nanum Gothic Coding">나눔고딕 코딩</option>
+                <option value="Pretendard">프리텐다드</option>
+                <option value="GothicA1">고딕A1</option>
+              </select>
+            </div>
+            <div class="subtitle-item">
+              <label for="subtitlePosition">📐 자막 위치</label>
+              <select id="subtitlePosition">
+                <option value="bottom">하단 (권장)</option>
+                <option value="center">중앙</option>
+                <option value="top">상단</option>
+              </select>
+            </div>
+            <div class="subtitle-item">
+              <label for="subtitleColor">🎨 자막 색상</label>
+              <input type="color" id="subtitleColor" value="#ffffff" />
+            </div>
+            <div class="subtitle-item">
+              <label for="subtitleBg">🟥 자막 배경색</label>
+              <input type="color" id="subtitleBg" value="#000000" />
+            </div>
+          </div>
+          <div style="margin-top:10px; display:flex; align-items:center; gap:10px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary); cursor:pointer;">
+              <input type="checkbox" id="subtitleBgEnabled" style="accent-color:var(--accent-violet);" checked />
+              자막 배경박스 사용
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary); cursor:pointer;">
+              <input type="checkbox" id="subtitleOutline" style="accent-color:var(--accent-violet);" checked />
+              외곽선 사용
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--accent-violet); cursor:pointer;" onclick="showUpgradeModal(event)">
+              <input type="checkbox" disabled />
+              🔒 워터마크 끄기 (Pro)
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 영상 완성하기 버튼 -->
+      <button class="btn-generate" id="renderVideoBtn" onclick="renderVideo()" style="margin-bottom:20px; background:linear-gradient(135deg, #10b981, #059669);">
+        🎬 영상 완성하기 (다운로드)
+      </button>
+
+      <!-- 예약 발행 카드 -->
+      <div class="card">
+        <p class="section-title">⏰ 예약 발행</p>
+
+        <!-- 네이버/틱톡 계정 연결 (최초 1회 로그인 필요) -->
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+          <a class="btn-sm" href="/auth/naver/login" target="_blank" rel="noopener" style="text-decoration:none; flex:1; text-align:center;">🔗 네이버 연결</a>
+          <a class="btn-sm" href="/auth/tiktok/login" target="_blank" rel="noopener" style="text-decoration:none; flex:1; text-align:center;">🔗 틱톡 연결</a>
+        </div>
+        <p class="text-muted" style="margin-bottom:14px;">네이버/틱톡 즉시 발행은 최초 1회 위 버튼으로 계정을 연결해야 동작합니다 (X는 연결 불필요)</p>
+
+        <div class="schedule-area">
+          <div class="schedule-row">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label" for="scheduleDate">날짜</label>
+              <input type="date" class="form-input" id="scheduleDate" />
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label" for="scheduleTime">시간</label>
+              <input type="time" class="form-input" id="scheduleTime" />
+            </div>
+            <button class="btn-schedule" onclick="schedulePost()" id="scheduleBtn">
+              📅 예약
+            </button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- 즉시 발행 -->
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn-sm" onclick="handleQuickAction('publish')" style="flex:1; padding:10px; text-align:center; background:rgba(124, 58, 237, 0.2); border:1px solid rgba(124, 58, 237, 0.5);">
+            🚀 <span id="quickPublishText">인스타그램 바로 발행</span>
+          </button>
+          <button class="btn-sm" onclick="handleQuickAction('copy')" style="flex:1; padding:10px; text-align:center;">
+            📋 <span id="quickCopyText">인스타그램 복사 후 이동</span>
+          </button>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- 예약 게시물 목록 -->
+        <div class="section-title">📋 예약 목록</div>
+        <div class="schedule-list" id="scheduleList">
+          <div class="empty-state">
+            <span class="empty-icon">📅</span>
+            예약된 게시물이 없습니다
+          </div>
+        </div>
+
+        <button class="btn-sm" onclick="loadScheduledPosts()" style="margin-top:8px; width:100%; text-align:center;">
+          🔄 목록 새로고침
+        </button>
+        <p class="text-muted" style="margin-top:8px; text-align:center;">대기 중 항목의 [취소] 버튼으로 예약을 삭제할 수 있습니다</p>
+      </div>
+
+    </div><!-- /right-panel -->
+
+  </div><!-- /main-grid -->
+
+  <!-- ─── FAQ Section (자주 묻는 질문) ─────────────────────── -->
+  <section class="faq-section">
+    <h2 class="faq-title">자주 묻는 질문 (FAQ)</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-question">Q. 정말 100% 무료인가요? 비용 0원의 원리가 뭔가요? <span>▼</span></div>
+        <div class="faq-answer">네, 본 시스템은 사용자 PC의 자원(FFmpeg)을 직접 활용하고, OpenAI의 초경량 모델을 통해 텍스트만 생성하므로 비싼 영상 처리 서버 비용이나 비전 API 호출 비용이 발생하지 않습니다. 월 $1 이하로 무제한에 가깝게 사용할 수 있습니다.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">Q. 어떤 SNS 플랫폼들을 지원하나요? <span>▼</span></div>
+        <div class="faq-answer">현재 인스타그램(릴스/피드), 틱톡, 당근마켓, 네이버 블로그, 페이스북, X(트위터), 스레드 총 7개 플랫폼의 자동 원고 작성 및 영상/사진 최적화를 지원합니다.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">Q. 제가 올린 사진과 영상은 안전하게 보관되나요? <span>▼</span></div>
+        <div class="faq-answer">본 서비스는 외부 서버로 미디어를 전송하여 장기간 보관하지 않습니다. 모든 변환 및 합성(자막, BGM) 작업은 사용자의 로컬 환경 또는 일회성 휘발 환경에서 처리되므로 정보 유출의 위험이 없습니다.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">Q. 예약 발행은 어떻게 작동하나요? 창을 꺼도 되나요? <span>▼</span></div>
+        <div class="faq-answer">예약 발행은 로컬 시스템의 스케줄러를 통해 동작합니다. 따라서 예약된 시간에 PC가 켜져 있어야 하며 프로그램 백그라운드 프로세스가 동작 중이어야 성공적으로 발행됩니다. 창을 끄더라도 백엔드 서버가 켜져 있다면 문제없습니다.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">Q. 완성된 영상을 직접 수정할 수도 있나요? <span>▼</span></div>
+        <div class="faq-answer">물론입니다! 2단계 AI 편집 탭에서 자막 내용, 해시태그, BGM을 자유롭게 수정하고 다시 생성 버튼을 누르면 즉시 새로운 영상이 만들어집니다.</div>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /app-wrapper -->
+
+<!-- 토스트 알림 컨테이너 -->
+<div class="toast-container" id="toastContainer"></div>
+
+
+<script>
+/* ───────────────────────────────────────────────────────
+   상태 관리
+─────────────────────────────────────────────────────── */
+const state = {
+  platform: 'instagram',
+  uploadedFilePath: null,
+  uploadedFileType: null,
+  originalContent: '',
+  selectedBGM: 'none',
+  bgmVolume: 0.3,
+};
+
+const PLATFORM_NAMES = {
+  instagram:  '인스타그램',
+  tiktok:     '틱톡',
+  naver_blog: '블로그',
+  facebook:   '페이스북',
+  x_twitter:  'X (트위터)',
+  threads:    '스레드',
+};
+
+const PLATFORM_CHAR_LIMITS = {
+  instagram:  2200,
+  tiktok:     2200,
+  naver_blog: 10000,
+  facebook:   63206,
+  x_twitter:  280,
+  threads:    500,
+};
+
+/* ───────────────────────────────────────────────────────
+   초기화
+─────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  // 오늘 날짜를 기본값으로
+  const today = new Date();
+  document.getElementById('scheduleDate').value = today.toISOString().split('T')[0];
+  document.getElementById('scheduleTime').value = '09:00';
+
+  // 에디터 글자수 카운터
+  document.getElementById('editorArea').addEventListener('input', updateCharCounter);
+
+  // BGM 볼륨 슬라이더
+  document.getElementById('bgmVolume').addEventListener('input', (e) => {
+    state.bgmVolume = e.target.value / 100;
+    document.getElementById('bgmVolumeLabel').textContent = `${e.target.value}%`;
+  });
+
+  // 파일 입력 이벤트
+  document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+  // 드래그앤드롭
+  const dz = document.getElementById('dropzone');
+  dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dz.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+
+  // FAQ 아코디언 토글
+  document.querySelectorAll('.faq-question').forEach(item => {
+    item.addEventListener('click', () => {
+      const parent = item.parentElement;
+      const isActive = parent.classList.contains('active');
+      
+      // 모든 FAQ 닫기
+      document.querySelectorAll('.faq-item').forEach(faq => {
+        faq.classList.remove('active');
+        faq.querySelector('span').textContent = '▼';
+      });
+      
+      // 클릭한 항목만 열기 (열려있지 않았다면)
+      if (!isActive) {
+        parent.classList.add('active');
+        item.querySelector('span').textContent = '▲';
+      }
+    });
+  });
+
+  // 예약 목록 로드
+  loadScheduledPosts();
+
+  updateCharCounter();
+});
+
+/* ───────────────────────────────────────────────────────
+   플랫폼 선택
+─────────────────────────────────────────────────────── */
+document.getElementById('platformTabs').addEventListener('click', (e) => {
+  const tab = e.target.closest('.platform-tab');
+  if (!tab) return;
+
+  document.querySelectorAll('.platform-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+
+  state.platform = tab.dataset.platform;
+  document.getElementById('platformBadge').textContent = PLATFORM_NAMES[state.platform];
+  updateCharCounter();
+  
+  // 즉시 발행 버튼 텍스트 업데이트
+  const name = PLATFORM_NAMES[state.platform] || state.platform;
+  document.getElementById('quickPublishText').textContent = `${name} 바로 발행`;
+  document.getElementById('quickCopyText').textContent = `${name} 복사 후 이동`;
+});
+
+/* ───────────────────────────────────────────────────────
+   즉시 발행 핸들러
+─────────────────────────────────────────────────────── */
+function handleQuickAction(action) {
+  if (action === 'publish') {
+    publishNow(state.platform);
+  } else {
+    copyAndAlert(state.platform);
+  }
+}
+
+/* ───────────────────────────────────────────────────────
+   파일 업로드 처리
+─────────────────────────────────────────────────────── */
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) handleFile(file);
+}
+
+function handleFile(file) {
+  const isVideo = file.type.startsWith('video/');
+  const isImage = file.type.startsWith('image/');
+
+  if (!isVideo && !isImage) {
+    showToast('지원하지 않는 파일 형식입니다', 'error');
+    return;
+  }
+
+  state.uploadedFileType = isVideo ? 'video' : 'image';
+
+  // 미리보기
+  const url = URL.createObjectURL(file);
+  const preview = document.getElementById('dropzonePreview');
+  const previewVideo = document.getElementById('previewVideo');
+  const previewImage = document.getElementById('previewImage');
+  const defaultUI = document.getElementById('dropzoneDefault');
+  const filename = document.getElementById('previewFilename');
+
+  defaultUI.style.display = 'none';
+  preview.classList.add('visible');
+  filename.textContent = file.name;
+
+  if (isVideo) {
+    previewVideo.src = url;
+    previewVideo.style.display = 'block';
+    previewImage.style.display = 'none';
+    document.getElementById('sttOption').style.display = 'block';
+    document.getElementById('photoDescArea').classList.remove('visible');
+  } else {
+    previewImage.src = url;
+    previewImage.style.display = 'block';
+    previewVideo.style.display = 'none';
+    document.getElementById('sttOption').style.display = 'none';
+    document.getElementById('photoDescArea').classList.add('visible');
+  }
+
+  // 실제 업로드 (백엔드 연동)
+  uploadFile(file);
+}
+
+async function uploadFile(file) {
+  const progressWrap = document.getElementById('uploadProgress');
+  const progressFill = document.getElementById('uploadProgressFill');
+  const progressLabel = document.getElementById('uploadProgressLabel');
+
+  progressWrap.classList.add('visible');
+  progressFill.style.width = '30%';
+  progressLabel.textContent = '파일 업로드 중...';
+
+  try {
+    const formData = new FormData();
+    formData.append('video', file);
+
+    const runSTT = document.getElementById('runSTT').checked;
+    formData.append('run_stt', runSTT.toString());
+
+    progressFill.style.width = '60%';
+    progressLabel.textContent = runSTT ? 'Whisper STT 실행 중 (시간이 걸릴 수 있습니다)...' : '처리 중...';
+
+    const res = await fetch('/api/upload-video', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (data.success) {
+      state.uploadedFilePath = data.file_path;
+      progressFill.style.width = '100%';
+      progressLabel.textContent = '✅ 업로드 완료!';
+      showToast('파일 업로드 완료!', 'success');
+
+      // STT 결과를 주제 입력란에 채우기
+      if (data.transcript) {
+        document.getElementById('topicInput').value = data.transcript;
+        showToast('🎙️ 음성 텍스트 추출 완료', 'info');
+      }
+
+      setTimeout(() => progressWrap.classList.remove('visible'), 2000);
+    } else {
+      throw new Error(data.error || '업로드 실패');
+    }
+  } catch (err) {
+    progressLabel.textContent = `❌ ${err.message}`;
+    progressFill.style.width = '100%';
+    progressFill.style.background = '#ef4444';
+    showToast(err.message, 'error');
+  }
+}
+
+/* ───────────────────────────────────────────────────────
+   AI 원고 생성
+─────────────────────────────────────────────────────── */
+async function generateContent() {
+  const topic = document.getElementById('topicInput').value.trim();
+  const photoDesc = document.getElementById('photoDesc').value.trim();
+
+  if (!topic && !photoDesc) {
+    showToast('주제 또는 사진 설명을 입력해주세요', 'error');
+    document.getElementById('topicInput').focus();
+    return;
+  }
+
+  const fullTopic = topic + (photoDesc ? ` / 이미지: ${photoDesc}` : '');
+
+  const btn = document.getElementById('generateBtn');
+  btn.classList.add('loading');
+  btn.innerHTML = '<span class="spinner"></span>AI 생성 중...';
+
+  // 에디터 타이핑 효과
+  const editor = document.getElementById('editorArea');
+  editor.classList.add('typing-effect');
+  editor.value = '';
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic: fullTopic,
+        platform: state.platform,
+        business_type: document.getElementById('businessType').value,
+        location: document.getElementById('locationInput').value,
+        tone: document.getElementById('toneInput').value,
+        image_path: state.uploadedFilePath,
+        is_premium: true,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.error || '생성 실패');
+
+    const result = data.data;
+    state.originalContent = result.full_post || result.caption || result.body || '';
+    state.generatedData = result;
+
+    // 타이핑 효과로 텍스트 표시
+    await typeText(editor, state.originalContent);
+    editor.classList.remove('typing-effect');
+
+    // 해시태그 표시
+    if (result.hashtags && result.hashtags.length > 0) {
+      showHashtags(result.hashtags);
+    }
+
+    // 버튼 활성화
+    document.getElementById('restoreBtn').disabled = false;
+    document.getElementById('regenBtn').disabled = false;
+
+    // 진행 상태바 STEP 2 활성화
+    goToStep(2);
+
+    updateCharCounter();
+    showToast('✨ 원고 생성 완료!', 'success');
+
+  } catch (err) {
+    editor.classList.remove('typing-effect');
+    if (err.message === 'LIMIT_EXCEEDED') {
+      editor.value = '';
+      showUpgradeModal();
+    } else {
+      editor.value = `[오류] ${err.message}\n\n.env 파일에 OPENAI_API_KEY를 설정했는지 확인해주세요.`;
+      showToast(err.message, 'error');
+    }
+  } finally {
+    btn.classList.remove('loading');
+    btn.innerHTML = '✨ AI 원고 자동 생성';
+  }
+}
+
+/* ───────────────────────────────────────────────────────
+   영상 렌더링 (WEEK 3)
+─────────────────────────────────────────────────────── */
+async function renderVideo() {
+  if (!state.uploadedFilePath) {
+    showToast('먼저 미디어(사진/영상)를 업로드해주세요', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('renderVideoBtn');
+  btn.classList.add('loading');
+  btn.innerHTML = '<span class="spinner"></span>영상 렌더링 중... (최대 1~2분 소요)';
+
+  const subtitle_options = {
+    font: document.getElementById('subtitleFont').value,
+    position: document.getElementById('subtitlePosition').value === 'top' ? ['center', 0.1] :
+              document.getElementById('subtitlePosition').value === 'bottom' ? ['center', 0.85] :
+              ['center', 0.5],
+    color: document.getElementById('subtitleColor').value,
+    bg_color: document.getElementById('subtitleBgEnabled').checked ? document.getElementById('subtitleBg').value : 'transparent',
+    stroke_color: '#000000',
+    stroke_width: document.getElementById('subtitleOutline').checked ? 2 : 0,
+  };
+
+  try {
+    const res = await fetch('/api/process-video', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        video_path: state.uploadedFilePath,
+        subtitle_text: document.getElementById('editorArea').value.trim(),
+        platform: state.platform,
+        bgm_path: state.selectedBGM === 'none' ? null : `static/assets/bgm/${state.selectedBGM}.mp3`,
+        subtitle_options: subtitle_options
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.error || '렌더링 실패');
+
+    const output_path = data.data.output_path;
+    const filename = output_path.split(/[\\/]/).pop();
+
+    showToast('✨ 영상 렌더링 완료! 다운로드를 시작합니다.', 'success');
+    
+    // 자동 다운로드 트리거
+    const a = document.createElement('a');
+    a.href = `/api/download/${filename}`;
+    a.download = filename;
+    a.click();
+
+  } catch (err) {
+    showToast(`렌더링 오류: ${err.message}`, 'error');
+  } finally {
+    btn.classList.remove('loading');
+    btn.innerHTML = '🎬 영상 완성하기 (다운로드)';
+  }
+}
+
+/* 타이핑 효과 */
+async function typeText(element, text) {
+  element.value = '';
+  const delay = Math.max(5, Math.min(20, 1500 / text.length));
+  for (let i = 0; i < text.length; i++) {
+    element.value += text[i];
+    element.scrollTop = element.scrollHeight;
+    if (i % 5 === 0) await new Promise(r => setTimeout(r, delay));
+  }
+}
+
+/* 재생성 */
+async function regenerateContent() {
+  await generateContent();
+}
+
+/* 원문 복구 */
+function restoreOriginal() {
+  if (!state.originalContent) return;
+  document.getElementById('editorArea').value = state.originalContent;
+  updateCharCounter();
+  showToast('원문이 복구되었습니다', 'info');
+}
+
+/* 클립보드 복사 */
+function copyToClipboard() {
+  const text = document.getElementById('editorArea').value;
+  if (!text.trim()) { showToast('복사할 내용이 없습니다', 'error'); return; }
+  navigator.clipboard.writeText(text).then(() => showToast('📋 클립보드에 복사됨', 'success'));
+}
+
+/* 텍스트 파일 다운로드 */
+function downloadText() {
+  const text = document.getElementById('editorArea').value;
+  if (!text.trim()) { showToast('다운로드할 원고가 없습니다', 'error'); return; }
+  const platform = PLATFORM_NAMES[state.platform] || 'SNS';
+  const now = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+  const filename = `${platform}_원고_${now}.txt`;
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  showToast('⬇️ 원고 TXT 파일 다운로드 완료!', 'success');
+}
+
+/* 해시태그 복사 */
+function copyHashtags() {
+  const chips = document.querySelectorAll('.hashtag-chip');
+  const tags = Array.from(chips).map(c => c.textContent).join(' ');
+  navigator.clipboard.writeText(tags).then(() => showToast('🏷️ 해시태그 복사됨', 'success'));
+}
+
+/* ───────────────────────────────────────────────────────
+   해시태그 표시
+─────────────────────────────────────────────────────── */
+function showHashtags(hashtags) {
+  const area = document.getElementById('hashtagArea');
+  const list = document.getElementById('hashtagList');
+  area.style.display = 'block';
+
+  list.innerHTML = hashtags.map(tag => `
+    <span class="hashtag-chip" onclick="addHashtagToEditor('${tag}', this)">${tag}</span>
+  `).join('');
+}
+
+function addHashtagToEditor(tag, chipEl) {
+  const editor = document.getElementById('editorArea');
+  const current = editor.value;
+
+  if (chipEl.classList.contains('selected')) {
+    // 이미 선택된 경우: 에디터에서 제거 + 칩 해제
+    chipEl.classList.remove('selected');
+    const lines = current.split('\n').filter(line => line.trim() !== tag.trim());
+    editor.value = lines.join('\n');
+  } else {
+    // 새로 선택: 에디터에 추가 + 칩 active
+    chipEl.classList.add('selected');
+    if (!current.includes(tag)) {
+      editor.value = current + (current.endsWith('\n') ? '' : '\n') + tag;
+    }
+  }
+  updateCharCounter();
+}
+
+function resetHashtags() {
+  document.querySelectorAll('.hashtag-chip.selected').forEach(chip => {
+    chip.classList.remove('selected');
+  });
+  showToast('해시태그 선택이 초기화되었습니다', 'info');
+}
+
+/* ───────────────────────────────────────────────────────
+   글자수 카운터
+─────────────────────────────────────────────────────── */
+function updateCharCounter() {
+  const text = document.getElementById('editorArea').value;
+  const count = text.length;
+  const limit = PLATFORM_CHAR_LIMITS[state.platform] || 2200;
+  const counter = document.getElementById('charCounter');
+  const countEl = document.getElementById('charCount');
+  const limitEl = document.getElementById('charLimit');
+
+  countEl.textContent = count.toLocaleString();
+  limitEl.textContent = `/ ${limit.toLocaleString()}자`;
+
+  counter.className = 'char-counter';
+  if (count > limit * 0.9) counter.classList.add('danger');
+  else if (count > limit * 0.7) counter.classList.add('warning');
+}
+
+/* ───────────────────────────────────────────────────────
+   BGM 선택
+─────────────────────────────────────────────────────── */
+function selectBGM(el, bgmKey) {
+  document.querySelectorAll('.bgm-item').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  state.selectedBGM = bgmKey;
+}
+
+/* ───────────────────────────────────────────────────────
+   예약 발행
+─────────────────────────────────────────────────────── */
+async function schedulePost() {
+  const content = document.getElementById('editorArea').value.trim();
+  const date = document.getElementById('scheduleDate').value;
+  const time = document.getElementById('scheduleTime').value;
+
+  if (!content) { showToast('발행할 원고를 먼저 작성해주세요', 'error'); return; }
+  if (!date || !time) { showToast('날짜와 시간을 선택해주세요', 'error'); return; }
+
+  const hashtags = Array.from(document.querySelectorAll('.hashtag-chip')).map(c => c.textContent);
+
+  try {
+    const res = await fetch('/api/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        platform: state.platform,
+        content: content,
+        caption: content,
+        hashtags: hashtags,
+        media_path: state.uploadedFilePath,
+        scheduled_at: `${date} ${time}`,
+      }),
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      showToast(`📅 ${PLATFORM_NAMES[state.platform]} 게시물 예약 완료! (ID: ${data.post_id})`, 'success');
+      loadScheduledPosts();
+    } else {
+      throw new Error(data.error);
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+  // 예약 완료 시 STEP 3 활성화
+  goToStep(3);
+}
+
+/* ───────────────────────────────────────────────────────
+   예약 취소(삭제)
+─────────────────────────────────────────────────────── */
+async function deleteScheduledPost(postId) {
+  if (!confirm('이 예약 게시물을 취소하시겠습니까?')) return;
+  try {
+    const res = await fetch(`/api/schedule/${postId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      // DOM에서 즉시 제거
+      const el = document.getElementById(`schedule-item-${postId}`);
+      if (el) {
+        el.style.transition = 'all 0.3s ease';
+        el.style.opacity = '0';
+        el.style.transform = 'translateX(20px)';
+        setTimeout(() => { el.remove(); }, 300);
+      }
+      showToast('예약이 취소되었습니다', 'info');
+    } else {
+      throw new Error(data.error || '삭제 실패');
+    }
+  } catch (err) {
+    // 서버 미연결 시 그냥 DOM에서만 제거 (오프라인 모드)
+    const el = document.getElementById(`schedule-item-${postId}`);
+    if (el) { el.style.opacity='0'; setTimeout(()=>el.remove(),300); }
+    showToast('예약 항목을 삭제했습니다', 'info');
+  }
+}
+
+/* ───────────────────────────────────────────────────────
+   진행 상태바 업데이트
+─────────────────────────────────────────────────────── */
+function goToStep(stepNum) {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById(`step${i}`);
+    const connEl = document.getElementById(`connector${i}`);
+    stepEl.classList.remove('active', 'done');
+    if (connEl) connEl.classList.remove('active', 'done');
+
+    if (i < stepNum) {
+      stepEl.classList.add('done');
+      if (connEl) connEl.classList.add('done');
+    } else if (i === stepNum) {
+      stepEl.classList.add('active');
+      if (connEl) connEl.classList.add('active');
+    }
+  }
+}
+
+/* ───────────────────────────────────────────────────────
+   예약 목록 로드
+─────────────────────────────────────────────────────── */
+async function loadScheduledPosts() {
+  try {
+    const res = await fetch('/api/scheduled-posts');
+    const data = await res.json();
+    renderScheduleList(data.data || []);
+  } catch (err) {
+    // 서버 미실행 시 무시
+  }
+}
+
+function renderScheduleList(posts) {
+  const list = document.getElementById('scheduleList');
+  if (!posts.length) {
+    list.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span>예약된 게시물이 없습니다</div>';
+    return;
+  }
+
+  const PLATFORM_ICONS = { instagram:'📸', tiktok:'🎵', danggeun:'🥕', naver_blog:'📝', facebook:'📘', x_twitter:'🐦', threads:'🧵' };
+  const STATUS_CLASS = { pending: 'status-pending', published: 'status-published', failed: 'status-failed' };
+  const STATUS_TEXT  = { pending: '대기 중', published: '발행 완료', failed: '실패' };
+
+  list.innerHTML = posts.slice(0, 10).map(p => `
+    <div class="schedule-item" id="schedule-item-${p.id}">
+      <span>${PLATFORM_ICONS[p.platform] || '📄'}</span>
+      <span style="flex:1; color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+        ${(p.content || '').substring(0, 30)}...
+      </span>
+      <span style="color:var(--text-muted); font-size:10px;">${(p.scheduled_at || '').substring(0,16)}</span>
+      <span class="schedule-status ${STATUS_CLASS[p.status] || ''}">${STATUS_TEXT[p.status] || p.status}</span>
+      ${p.status === 'pending' ? `<button class="btn-delete-schedule" onclick="deleteScheduledPost(${p.id})" title="예약 취소">✕ 취소</button>` : ''}
+    </div>
+  `).join('');
+}
+
+/* ───────────────────────────────────────────────────────
+   즉시 발행 / 클립보드 복사 후 이동
+─────────────────────────────────────────────────────── */
+async function publishNow(platform) {
+  const content = document.getElementById('editorArea').value.trim();
+  if (!content) {
+    showToast('발행할 원고가 없습니다. 먼저 AI 원고를 생성해주세요!', 'warning');
+    return;
+  }
+
+  const platformName = PLATFORM_NAMES[platform] || platform;
+
+  // 발행 불가 플랫폼 체크
+  const unavailable = ['instagram', 'facebook', 'threads'];
+  if (unavailable.includes(platform)) {
+    showToast(`${platformName}은(는) 현재 메타 개발자 인증 대기 중입니다. 곧 활성화됩니다!`, 'info');
+    return;
+  }
+
+  // 발행 확인
+  if (!confirm(`${platformName}에 즉시 발행하시겠습니까?`)) return;
+
+  showToast(`🚀 ${platformName}(으)로 발행 중...`, 'info');
+
+  try {
+    const resp = await fetch('/api/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        platform: platform,
+        title: state.generatedData?.title || '',
+        content: content,
+        caption: state.generatedData?.caption || '',
+        hashtags: state.generatedData?.hashtags || '',
+      }),
+    });
+
+    const result = await resp.json();
+
+    if (result.success) {
+      const url = result.data?.url || '';
+      showToast(`🎉 ${platformName} 발행 성공!${url ? ' ' + url : ''}`, 'success');
+
+      // 틱톡 영상 필수 안내
+      if (result.data?.note) {
+        setTimeout(() => showToast(`📌 ${result.data.note}`, 'info'), 2000);
+      }
+    } else {
+      showToast(`❌ ${platformName} 발행 실패: ${result.data?.error || result.error || '알 수 없는 오류'}`, 'error');
+    }
+  } catch (err) {
+    showToast(`❌ 네트워크 오류: ${err.message}`, 'error');
+  }
+}
+
+function copyAndAlert(platform) {
+  copyToClipboard();
+  showToast(`📋 원고가 복사되었습니다. ${PLATFORM_NAMES[platform]} 앱을 열어 붙여넣기 해주세요!`, 'success');
+}
+
+/* ───────────────────────────────────────────────────────
+   토스트 알림
+─────────────────────────────────────────────────────── */
+/* ───────────────────────────────────────────────────────
+   템플릿 카드 클릭 적용 (CapCut 벤치마킹)
+─────────────────────────────────────────────────────── */
+const TEMPLATES = {
+  cafe: {
+    topic: '오늘 신메뉴 아메리카노 출시! 시그니처 라떼도 함께 선보입니다. 오픈 기념 2천원 할인 이벤트 진행 중 ☕',
+    businessType: '카페',
+  },
+  sale: {
+    topic: '주말 한정 20% 할인 이벤트! 오늘과 내일만 적용됩니다. 전 메뉴 대상, 수량 한정 🏷️',
+    businessType: '기타',
+  },
+  beauty: {
+    topic: '봄 시즌 스타일 변신! 펌 + 염색 세트 특가 진행 중입니다. 예약은 DM 또는 전화로 💇',
+    businessType: '미용실',
+  },
+  food: {
+    topic: '오늘의 점심 추천 메뉴! 직접 담근 김치와 함께하는 수제 된장찌개. 단체 예약 환영 🍽️',
+    businessType: '음식점',
+  },
+};
+
+function applyTemplate(key) {
+  const tpl = TEMPLATES[key];
+  if (!tpl) return;
+  document.getElementById('topicInput').value = tpl.topic;
+  const sel = document.getElementById('businessType');
+  if (tpl.businessType) {
+    for (let opt of sel.options) {
+      if (opt.value === tpl.businessType) { sel.value = tpl.businessType; break; }
+    }
+  }
+  // 카드 하이라이트 애니메이션
+  document.querySelectorAll('.template-card').forEach(c => c.style.borderColor = '');
+  showToast(`✨ "${tpl.topic.substring(0, 20)}..." 템플릿 적용 완료! AI 생성 버튼을 눌러보세요`, 'success');
+  // 좌측 패널 주제 입력창으로 부드럽게 스크롤
+  document.getElementById('topicInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.getElementById('topicInput').focus();
+}
+
+/* 프리셋 퀵버튼 적용 (Wrtn 벤치마킹) */
+function applyPreset(text) {
+  document.getElementById('topicInput').value = text;
+  // 활성 상태 표시
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+  event.target.classList.add('active');
+  setTimeout(() => event.target.classList.remove('active'), 1500);
+  showToast('📝 주제가 입력되었습니다. 필요하면 수정 후 AI 생성을 눌러보세요!', 'info');
+  document.getElementById('topicInput').focus();
+}
+
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const icons = { success: '✅', error: '❌', info: '💡' };
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span>${icons[type] || '💡'}</span><span>${message}</span>`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(20px)';
+    toast.style.transition = 'all 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
+}
+</script>
+  <script>
+    function showUpgradeModal(e) {
+      if (e) e.preventDefault();
+      document.getElementById('upgradeModal').classList.add('active');
+    }
+    function hideUpgradeModal() {
+      document.getElementById('upgradeModal').classList.remove('active');
+    }
+  </script>
+
+  <!-- 업그레이드 모달 -->
+  <div class="modal-overlay" id="upgradeModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="hideUpgradeModal()">×</button>
+      <div style="font-size:48px; margin-bottom:16px;">🚀</div>
+      <h2 style="font-size:24px; color:#fff; margin-bottom:8px;">무료 횟수 초과</h2>
+      <p style="color:var(--text-secondary); font-size:14px;">무료 플랜의 일일 생성 한도(3회)를 모두 사용하셨습니다.<br>Pro 플랜으로 업그레이드하고 무제한 생성과 프리미엄 기능을 누려보세요!</p>
+      
+      <div class="pricing-tier">
+        <div style="color:var(--accent-violet); font-weight:700; letter-spacing:1px;">PRO PLAN</div>
+        <div class="pricing-price">₩19,900<span style="font-size:14px; color:var(--text-muted); font-weight:400;"> / 월</span></div>
+        <ul style="text-align:left; color:var(--text-primary); font-size:14px; margin-top:16px; padding-left:24px; line-height:1.8;">
+          <li>✨ <b>무제한</b> AI 원고 생성</li>
+          <li>🎬 <b>무제한</b> 영상 렌더링</li>
+          <li>🔒 <b>워터마크 제거</b> 기능</li>
+          <li>🤖 Vision API (이미지 자동 분석)</li>
+        </ul>
+        <button class="btn-upgrade" onclick="alert('데모 버전입니다. 결제 연동은 별도 개발이 필요합니다.')">지금 업그레이드하기</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
