@@ -42,8 +42,8 @@ NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET", "")
 NAVER_BLOG_ID = os.getenv("NAVER_BLOG_ID", "")
 
 # ─── OAuth 콜백 URI (네이버/틱톡 로그인 연동용) ────────────────
-NAVER_REDIRECT_URI = os.getenv("NAVER_REDIRECT_URI", "https://autopost-ai-bcwk.onrender.com/auth/naver/callback")
-TIKTOK_REDIRECT_URI = os.getenv("TIKTOK_REDIRECT_URI", "https://autopost-ai-bcwk.onrender.com/auth/tiktok/callback")
+NAVER_REDIRECT_URI = "https://autopost-ai-bcwk.onrender.com/auth/naver/callback"
+TIKTOK_REDIRECT_URI = "https://autopost-ai-bcwk.onrender.com/auth/tiktok/callback"
 
 # ─── X (Twitter) API ─────────────────────────────────────────
 X_API_KEY = os.getenv("X_API_KEY", "")
