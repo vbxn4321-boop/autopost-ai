@@ -122,6 +122,13 @@ def api_generate():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# ─── API: 틱톡 도메인 인증 라우트 ───────────────────────────────────
+
+@app.route("/tiktoks7SekCpH6YGzzbvFLHt2U8wbRZVqkOCv.txt", methods=["GET"])
+def tiktok_verification():
+    """틱톡 Web 플랫폼 도메인 인증(Signature file) 전용 라우트"""
+    return "tiktok-developers-site-verification=s7SekCpH6YGzzbvFLHt2U8wbRZVqkOCv"
+
 # ─── API: 영상 업로드 ─────────────────────────────────────────
 
 @app.route("/api/upload-video", methods=["POST"])
