@@ -48,7 +48,7 @@ NAVER_BLOG_ID = os.getenv("NAVER_BLOG_ID", "")
 
 # ─── OAuth 콜백 URI (네이버/틱톡/메타 로그인 연동용) ────────────
 NAVER_REDIRECT_URI = "https://autopost-ai-bcwk.onrender.com/auth/naver/callback"
-TIKTOK_REDIRECT_URI = "http://127.0.0.1:5000/auth/tiktok/callback"
+TIKTOK_REDIRECT_URI = "https://autopost-ai-bcwk.onrender.com/auth/tiktok/callback"
 META_REDIRECT_URI = os.getenv("META_REDIRECT_URI", "https://autopost-ai-bcwk.onrender.com/auth/meta/callback")
 
 # ─── X (Twitter) API ─────────────────────────────────────────
