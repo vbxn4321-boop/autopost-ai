@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SNS AI 자동 발행 시스템 | 소상공인 올인원 마케팅 툴</title>
-  <meta name="description" content="주제 입력 또는 영상 업로드만으로 인스타그램, 틱톡, 블로그 원고와 영상을 AI가 자동 생성·발행합니다." />
+  <meta name="description" content="질문에 답하듯 몇 번만 누르면 인스타그램, 틱톡, 블로그용 원고와 영상을 AI가 자동으로 만들어 발행합니다." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,73 +12,78 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 </head>
-<body>
+<body class="wizard-body">
 
-<!-- ═══════════════════════════════════════════════════════
-     상단 고정 액션바 — 다운로드 / 예약 / 즉시발행 (항상 접근 가능)
-═══════════════════════════════════════════════════════ -->
-<div class="top-actionbar">
-  <div class="brand">
-    <div class="brand-logo">🚀</div>
-    <div class="brand-title">AutoPost AI</div>
+<div class="wizard-shell">
+
+  <!-- 상단: 뒤로가기 + 진행 표시 -->
+  <div class="wizard-topbar">
+    <button class="wizard-back" id="wizardBackBtn" onclick="prevStep()" disabled>‹</button>
+    <div class="wizard-progress-dots" id="wizardDots">
+      <span class="dot current" data-dot="1"></span>
+      <span class="dot" data-dot="2"></span>
+      <span class="dot" data-dot="3"></span>
+      <span class="dot" data-dot="4"></span>
+      <span class="dot" data-dot="5"></span>
+    </div>
+    <div class="wizard-brand">AutoPost AI</div>
   </div>
-  <button class="topbar-btn" onclick="downloadText()" title="현재 원고를 텍스트 파일로 다운로드">⬇️ 원고 다운로드</button>
-  <button class="topbar-btn green" onclick="scrollToSchedule()" title="예약 발행 영역으로 이동">📅 예약 발행</button>
-  <button class="topbar-btn primary" onclick="handleQuickAction('publish')" title="현재 선택된 플랫폼에 즉시 발행">🚀 즉시 발행</button>
-</div>
 
-<!-- ═══════════════════════════════════════════════════════
-     전체 셸: 좌측(환경설정) + 메인(중앙 미디어에디터 / 하단 원고)
-═══════════════════════════════════════════════════════ -->
-<div class="app-shell">
+  <!-- ═══ STEP 1 — 어디에 올릴까요? ═══ -->
+  <section class="wizard-step active" data-step="1">
+    <h1 class="wizard-question">어디에 올릴까요?</h1>
+    <p class="wizard-sub">한 곳을 골라주세요. 고르면 바로 다음으로 넘어가요.</p>
 
-  <!-- ─────────────────────────────────────────────────────
-       좌측 패널: 환경 설정 탭
-  ───────────────────────────────────────────────────── -->
-  <aside class="sidebar">
+    <div class="choice-card-grid" id="platformTabs">
+      <button class="choice-card platform-tab-row active" data-platform="instagram" id="tab-instagram">
+        <span class="choice-icon">📸</span><span class="choice-label">인스타그램</span>
+        <span class="conn-dot" id="conn-instagram"></span>
+      </button>
+      <button class="choice-card platform-tab-row" data-platform="tiktok" id="tab-tiktok">
+        <span class="choice-icon">🎵</span><span class="choice-label">틱톡</span>
+        <span class="conn-dot" id="conn-tiktok"></span>
+      </button>
+      <button class="choice-card platform-tab-row" data-platform="naver_blog" id="tab-naver_blog">
+        <span class="choice-icon">📝</span><span class="choice-label">네이버 블로그</span>
+        <span class="conn-dot" id="conn-naver_blog"></span>
+      </button>
+      <button class="choice-card platform-tab-row" data-platform="facebook" id="tab-facebook">
+        <span class="choice-icon">📘</span><span class="choice-label">페이스북</span>
+        <span class="conn-dot" id="conn-facebook"></span>
+      </button>
+      <button class="choice-card platform-tab-row" data-platform="x_twitter" id="tab-x_twitter">
+        <span class="choice-icon">🐦</span><span class="choice-label">X (트위터)</span>
+      </button>
+      <button class="choice-card platform-tab-row" data-platform="threads" id="tab-threads">
+        <span class="choice-icon">🧵</span><span class="choice-label">스레드</span>
+      </button>
+    </div>
+  </section>
 
-    <div class="card compact">
-      <p class="sidebar-section-title">📱 플랫폼 선택</p>
-      <div class="platform-tabs-vertical" id="platformTabs">
-        <button class="platform-tab-row active" data-platform="instagram" id="tab-instagram">
-          <span class="platform-icon">📸</span><span>인스타그램</span>
-          <span class="conn-dot" id="conn-instagram"></span>
-        </button>
-        <button class="platform-tab-row" data-platform="tiktok" id="tab-tiktok">
-          <span class="platform-icon">🎵</span><span>틱톡</span>
-          <span class="conn-dot" id="conn-tiktok"></span>
-        </button>
-        <button class="platform-tab-row" data-platform="naver_blog" id="tab-naver_blog">
-          <span class="platform-icon">📝</span><span>네이버 블로그</span>
-          <span class="conn-dot" id="conn-naver_blog"></span>
-        </button>
-        <button class="platform-tab-row" data-platform="facebook" id="tab-facebook">
-          <span class="platform-icon">📘</span><span>페이스북</span>
-          <span class="conn-dot" id="conn-facebook"></span>
-        </button>
-        <button class="platform-tab-row" data-platform="x_twitter" id="tab-x_twitter">
-          <span class="platform-icon">🐦</span><span>X (트위터)</span>
-        </button>
-        <button class="platform-tab-row" data-platform="threads" id="tab-threads">
-          <span class="platform-icon">🧵</span><span>스레드</span>
-        </button>
-      </div>
-      <p class="text-muted" style="margin-top:10px;">🟢 연결됨 · 🔴 미연결(로그인 필요)</p>
+  <!-- ═══ STEP 2 — 무엇을 올릴까요? ═══ -->
+  <section class="wizard-step" data-step="2">
+    <h1 class="wizard-question">무엇을 올릴까요?</h1>
+    <p class="wizard-sub">한 줄만 써주세요. 나머지는 AI가 알아서 채워드려요.</p>
+
+    <div class="preset-chips" id="presetChips" style="display:flex; flex-wrap:wrap; gap:6px;">
+      <button class="preset-chip" onclick="applyPreset('신메뉴 출시 이벤트! 오늘 하루만 20% 할인, 많이 와주세요 🎉', this)">📢 신메뉴</button>
+      <button class="preset-chip" onclick="applyPreset('주말 특별 할인 행사! 한정 수량이라 서두르세요 ⏰', this)">🏷️ 할인</button>
+      <button class="preset-chip" onclick="applyPreset('오늘의 추천 메뉴를 소개합니다. 직접 만든 수제 음식이에요 🍴', this)">🍴 오늘의 메뉴</button>
+      <button class="preset-chip" onclick="applyPreset('단골 고객 감사 이벤트! 10번 방문 시 서비스 제공합니다 💛', this)">💛 단골 감사</button>
     </div>
 
-    <div class="card compact">
-      <p class="sidebar-section-title">⚡ 빠른 주제 채우기</p>
-      <div class="preset-chips" id="presetChips" style="display:flex; flex-wrap:wrap; gap:6px;">
-        <button class="preset-chip" onclick="applyPreset('신메뉴 출시 이벤트! 오늘 하루만 20% 할인, 많이 와주세요 🎉', this)">📢 신메뉴</button>
-        <button class="preset-chip" onclick="applyPreset('주말 특별 할인 행사! 한정 수량이라 서두르세요 ⏰', this)">🏷️ 할인</button>
-        <button class="preset-chip" onclick="applyPreset('오늘의 추천 메뉴를 소개합니다. 직접 만든 수제 음식이에요 🍴', this)">🍴 오늘의 메뉴</button>
-        <button class="preset-chip" onclick="applyPreset('단골 고객 감사 이벤트! 10번 방문 시 서비스 제공합니다 💛', this)">💛 단골 감사</button>
-      </div>
+    <div class="form-group" style="margin-bottom:0;">
+      <textarea class="form-textarea" id="topicInput" rows="4" style="font-size:16px;"
+        placeholder="예) 오늘 신메뉴 아메리카노 출시! 런치 타임 2천원 할인 이벤트"
+        oninput="onTopicInput()"></textarea>
     </div>
 
-    <div class="card compact">
-      <p class="sidebar-section-title">🏪 업종 / 지역 / 톤</p>
+    <button class="advanced-toggle" onclick="toggleAdvanced(this, 'step2Advanced')">
+      <span>업종 · 지역 · 톤 직접 설정하기</span><span class="chevron">▾</span>
+    </button>
+    <div class="advanced-panel" id="step2Advanced">
       <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label" for="businessType">업종</label>
         <select class="form-select" id="businessType">
           <option value="카페">☕ 카페</option>
           <option value="음식점">🍽️ 음식점</option>
@@ -92,9 +97,11 @@
         </select>
       </div>
       <div class="form-group" style="margin-bottom:10px;">
-        <input type="text" class="form-input" id="locationInput" placeholder="지역 (예: 강남구)" value="서울" />
+        <label class="form-label" for="locationInput">지역</label>
+        <input type="text" class="form-input" id="locationInput" placeholder="예: 강남구" value="서울" />
       </div>
       <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label" for="toneInput">톤앤매너</label>
         <select class="form-select" id="toneInput">
           <option value="친근한">😊 친근한</option>
           <option value="전문적인">💼 전문적인</option>
@@ -105,181 +112,80 @@
         </select>
       </div>
     </div>
+  </section>
 
-    <div class="card compact">
-      <p class="sidebar-section-title">🎨 스타일 클론 (참고 URL)</p>
-      <div class="styleclone-row">
-        <input type="text" class="form-input" id="styleCloneUrl" placeholder="참고하고 싶은 사이트 URL" />
-        <button class="btn-sm primary" id="styleCloneBtn" onclick="applyStyleClone()">가져오기</button>
-      </div>
-      <div class="styleclone-result" id="styleCloneResult"></div>
-      <p class="text-muted" style="margin-top:8px;">※ 데모 기능 — 실제로 사이트에 접속하지 않고, 입력한 URL을 기반으로 준비된 스타일 중 하나를 추천해드려요.</p>
+  <!-- ═══ STEP 3 — 사진/영상 ═══ -->
+  <section class="wizard-step" data-step="3">
+    <h1 class="wizard-question">사진이나 영상이 있으신가요?</h1>
+    <p class="wizard-sub">없어도 괜찮아요 — 건너뛰고 다음으로 가셔도 돼요.</p>
+
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept="video/*,image/*" multiple />
+      <span class="dropzone-icon">📸</span>
+      <p class="dropzone-text">사진/영상을 드래그하거나 눌러서 올려주세요</p>
+      <p class="dropzone-hint">MP4, MOV, AVI, JPG, PNG 지원 · 최대 200MB · 여러 개 가능</p>
     </div>
 
-  </aside><!-- /sidebar -->
-
-  <!-- ─────────────────────────────────────────────────────
-       메인 컬럼: 중앙(미디어 업로드 + 타임라인 에디터) → 하단(원고 입력/관리)
-  ───────────────────────────────────────────────────── -->
-  <div class="main-col">
-
-    <!-- ═══ 중앙 패널: 미디어 업로드 + 타임라인 에디터 ═══ -->
-    <div class="card anchor-target" id="mediaEditorAnchor">
-      <p class="section-title">🎬 미디어 에디터</p>
-
-      <div class="dropzone" id="dropzone">
-        <input type="file" id="fileInput" accept="video/*,image/*" multiple />
-        <span class="dropzone-icon">📸</span>
-        <p class="dropzone-text">사진/영상을 드래그하거나 클릭하세요 (여러 개 선택 가능)</p>
-        <p class="dropzone-hint">MP4, MOV, AVI, JPG, PNG 지원 · 최대 200MB</p>
-      </div>
-
-      <div class="imagegen-row">
-        <button class="btn-sm primary" id="imageGenBtn" onclick="generateImageFromTopic()" style="flex:1;">
-          🪄 주제로 이미지 자동생성 (무료)
-        </button>
-      </div>
-
-      <div class="photo-desc-area" style="margin-top:12px;">
-        <div class="form-group" style="margin-bottom:0">
-          <label class="form-label" for="photoDesc">
-            📷 사진 내용 설명
-            <button class="btn-sm" id="analyzePhotoBtn" onclick="analyzePhoto()" type="button">🔍 AI로 자동 분석</button>
-          </label>
-          <textarea class="form-textarea" id="photoDesc" rows="2"
-            placeholder="사진에 보이는 것을 직접 입력하거나, 위 'AI로 자동 분석' 버튼으로 채울 수 있어요."></textarea>
-        </div>
-      </div>
-
-      <div id="sttOption" style="display:none; margin-top:12px;">
-        <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-secondary); cursor:pointer;">
-          <input type="checkbox" id="runSTT" style="accent-color:var(--accent-violet);" />
-          <span>🎙️ 영상 음성에서 자동으로 텍스트 추출 (Whisper STT 실행)</span>
-        </label>
-      </div>
-
-      <div class="progress-bar-wrap" id="uploadProgress">
-        <div class="progress-bar-track"><div class="progress-bar-fill" id="uploadProgressFill"></div></div>
-        <p class="progress-label" id="uploadProgressLabel">업로드 중...</p>
-      </div>
-
-      <!-- 타임라인 에디터: 이미지 기본 2초 / 영상 기본 4초 -->
-      <div class="timeline-wrap">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-          <p class="sidebar-section-title" style="margin-bottom:0;">🎞️ 타임라인 (이미지 2초 · 영상 4초 기본)</p>
-          <button class="btn-sm" id="analyzeStyleBtn" onclick="analyzeVideoStyle()">🔍 영상 스타일 자동분석</button>
-        </div>
-        <div class="timeline-strip" id="timelineStrip"></div>
-      </div>
-
-      <!-- 자막 설정 -->
-      <div class="subtitle-panel" id="subtitlePanel">
-        <div class="subtitle-panel-title">🎨 자막 설정 (합성 시 적용)</div>
-        <div class="subtitle-grid">
-          <div class="subtitle-item">
-            <label for="subtitleFont">📝 폰트</label>
-            <select id="subtitleFont">
-              <option value="NanumGothic">나눔고딕</option>
-              <option value="NanumBarunGothic">나눔바른고딕</option>
-              <option value="Pretendard">프리텐다드</option>
-              <option value="GothicA1">고딕A1</option>
-            </select>
-          </div>
-          <div class="subtitle-item">
-            <label for="subtitlePosition">📐 자막 위치</label>
-            <select id="subtitlePosition">
-              <option value="bottom">하단 (권장)</option>
-              <option value="center">중앙</option>
-              <option value="top">상단</option>
-            </select>
-          </div>
-          <div class="subtitle-item">
-            <label for="subtitleColor">🎨 자막 색상</label>
-            <input type="color" id="subtitleColor" value="#ffffff" />
-          </div>
-          <div class="subtitle-item">
-            <label for="subtitleBg">🟥 자막 배경색</label>
-            <input type="color" id="subtitleBg" value="#000000" />
-          </div>
-        </div>
-        <div style="margin-top:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary); cursor:pointer;">
-            <input type="checkbox" id="subtitleBgEnabled" style="accent-color:var(--accent-violet);" checked />
-            자막 배경박스 사용
-          </label>
-          <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary); cursor:pointer;">
-            <input type="checkbox" id="subtitleOutline" style="accent-color:var(--accent-violet);" checked />
-            외곽선 사용
-          </label>
-          <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--accent-violet); cursor:pointer;" onclick="showUpgradeModal(event)">
-            <input type="checkbox" disabled />
-            🔒 워터마크 끄기 (Pro)
-          </label>
-        </div>
-      </div>
-
-      <!-- BGM -->
-      <div class="bgm-panel">
-        <p class="sidebar-section-title">🎵 BGM (선택)</p>
-        <div class="bgm-grid">
-          <button class="bgm-item selected" data-bgm="none" onclick="selectBGM(this, 'none')">
-            <span class="bgm-emoji">🔇</span> BGM 없음
-          </button>
-          <button class="bgm-item disabled" data-bgm="upbeat" title="준비중 — 음원 파일 추가 예정">
-            <span class="bgm-emoji">☀️</span> 활기찬 (준비중)
-          </button>
-          <button class="bgm-item disabled" data-bgm="calm" title="준비중 — 음원 파일 추가 예정">
-            <span class="bgm-emoji">🌊</span> 잔잔한 (준비중)
-          </button>
-        </div>
-        <div class="bgm-upload-row">
-          <span>🎵 직접 업로드:</span>
-          <input type="file" id="bgmFileInput" accept="audio/mp3,audio/wav,audio/m4a,.mp3,.wav,.m4a" />
-        </div>
-        <div class="bgm-volume">
-          <span>🔈</span>
-          <input type="range" id="bgmVolume" min="0" max="100" value="30" />
-          <span id="bgmVolumeLabel">30%</span>
-          <span>🔊</span>
-        </div>
-      </div>
-
-      <button class="btn-generate green" id="composeBtn" onclick="composeTimeline()" style="margin-top:20px;">
-        🎬 타임라인 합성해서 다운로드
+    <div class="imagegen-row">
+      <button class="btn-sm primary" id="imageGenBtn" onclick="generateImageFromTopic()" style="flex:1;">
+        🪄 AI로 사진 자동 생성 (무료)
       </button>
     </div>
 
-    <!-- ═══ 하단 패널: 원고(텍스트) 입력 및 관리 영역 ═══ -->
-    <div class="card anchor-target" id="topicPanel">
-      <p class="section-title">✏️ 주제 입력</p>
-      <div class="form-group">
-        <label class="form-label" for="topicInput">
-          게시물 주제 / 내용
-          <span class="form-label-badge">필수</span>
-        </label>
-        <textarea class="form-textarea" id="topicInput" rows="3"
-          placeholder="예) 오늘 신메뉴 아메리카노 출시! 런치 타임 2천원 할인 이벤트 진행합니다."></textarea>
-      </div>
-      <button class="btn-generate" id="generateBtn" onclick="generateContent()">
-        ✨ AI 원고 자동 생성
-      </button>
+    <div id="sttOption" style="display:none;">
+      <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-secondary); cursor:pointer;">
+        <input type="checkbox" id="runSTT" style="accent-color:var(--accent-violet);" />
+        <span>🎙️ 영상 음성에서 자동으로 텍스트 추출 (Whisper STT 실행)</span>
+      </label>
     </div>
 
-    <div class="card">
+    <div class="progress-bar-wrap" id="uploadProgress">
+      <div class="progress-bar-track"><div class="progress-bar-fill" id="uploadProgressFill"></div></div>
+      <p class="progress-label" id="uploadProgressLabel">업로드 중...</p>
+    </div>
+
+    <div class="timeline-strip" id="timelineStrip"></div>
+
+    <button class="advanced-toggle" onclick="toggleAdvanced(this, 'step3Advanced')">
+      <span>사진 설명 직접 쓰기</span><span class="chevron">▾</span>
+    </button>
+    <div class="advanced-panel" id="step3Advanced">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label" for="photoDesc">
+          📷 사진 내용 설명
+          <button class="btn-sm" id="analyzePhotoBtn" onclick="analyzePhoto()" type="button">🔍 AI로 자동 분석</button>
+        </label>
+        <textarea class="form-textarea" id="photoDesc" rows="2"
+          placeholder="사진에 보이는 것을 직접 입력하거나, 'AI로 자동 분석' 버튼으로 채울 수 있어요."></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ STEP 4 — 결과 확인 ═══ -->
+  <section class="wizard-step" data-step="4">
+    <h1 class="wizard-question">확인해주세요</h1>
+    <p class="wizard-sub">AI가 쓴 원고예요. 자유롭게 고치셔도 돼요.</p>
+
+    <div id="wizardGenLoading" class="wizard-loading" style="display:none;">
+      <div class="spinner-lg"></div>
+      <p>AI가 원고를 쓰고 있어요...</p>
+    </div>
+
+    <div id="step4Content">
       <div class="editor-header">
         <div class="editor-title">
-          📄 원고 에디터
+          📄 원고
           <span class="editor-platform-badge" id="platformBadge">인스타그램</span>
         </div>
         <div class="editor-actions">
           <button class="btn-sm" onclick="restoreOriginal()" title="원문 복구" id="restoreBtn" disabled>↩️ 복구</button>
-          <button class="btn-sm" onclick="regenerateContent()" title="재생성" id="regenBtn" disabled>🔄 재생성</button>
+          <button class="btn-sm" onclick="regenerateContent()" title="다시 쓰기" id="regenBtn" disabled>🔄 다시쓰기</button>
           <button class="btn-sm primary" onclick="copyToClipboard()" title="복사" id="copyBtn">📋 복사</button>
         </div>
       </div>
 
       <textarea class="editor-area" id="editorArea"
-        placeholder="위에서 주제를 입력하고 'AI 원고 자동 생성'을 누르면 여기에 원고가 자동으로 생성됩니다. 직접 수정도 가능해요!"></textarea>
+        placeholder="AI가 원고를 쓰는 중이에요..."></textarea>
 
       <div class="char-counter" id="charCounter">
         글자 수: <span class="count" id="charCount">0</span>
@@ -296,74 +202,182 @@
           <button class="btn-sm" onclick="resetHashtags()">↩️ 선택 초기화</button>
         </div>
       </div>
+
+      <button class="btn-generate green" id="composeBtn" onclick="composeTimeline()" style="margin-top:16px;">
+        🎬 완성 영상 만들기
+      </button>
+      <p class="wizard-help-link" onclick="downloadText()" style="margin-top:10px;">원고만 텍스트 파일로 저장하기</p>
+
+      <button class="advanced-toggle" onclick="toggleAdvanced(this, 'step4Advanced')">
+        <span>자막 · BGM · 스타일 직접 편집하기</span><span class="chevron">▾</span>
+      </button>
+      <div class="advanced-panel" id="step4Advanced">
+
+        <div class="card compact">
+          <p class="sidebar-section-title">🎨 스타일 클론 (참고 URL)</p>
+          <div class="styleclone-row">
+            <input type="text" class="form-input" id="styleCloneUrl" placeholder="참고하고 싶은 사이트 URL" />
+            <button class="btn-sm primary" id="styleCloneBtn" onclick="applyStyleClone()">가져오기</button>
+          </div>
+          <div class="styleclone-result" id="styleCloneResult"></div>
+          <p class="text-muted" style="margin-top:8px;">※ 데모 기능 — 실제로 사이트에 접속하지 않고, 입력한 URL을 기반으로 준비된 스타일 중 하나를 추천해드려요.</p>
+        </div>
+
+        <div class="subtitle-panel" id="subtitlePanel">
+          <div class="subtitle-panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>🎬 자막 설정 (영상 합성 시 적용)</span>
+            <button class="btn-sm" id="analyzeStyleBtn" onclick="analyzeVideoStyle()">🔍 영상으로 자동추천</button>
+          </div>
+          <div class="subtitle-grid">
+            <div class="subtitle-item">
+              <label for="subtitleFont">📝 폰트</label>
+              <select id="subtitleFont">
+                <option value="NanumGothic">나눔고딕</option>
+                <option value="NanumBarunGothic">나눔바른고딕</option>
+                <option value="Pretendard">프리텐다드</option>
+                <option value="GothicA1">고딕A1</option>
+              </select>
+            </div>
+            <div class="subtitle-item">
+              <label for="subtitlePosition">📐 자막 위치</label>
+              <select id="subtitlePosition">
+                <option value="bottom">하단 (권장)</option>
+                <option value="center">중앙</option>
+                <option value="top">상단</option>
+              </select>
+            </div>
+            <div class="subtitle-item">
+              <label for="subtitleColor">🎨 자막 색상</label>
+              <input type="color" id="subtitleColor" value="#ffffff" />
+            </div>
+            <div class="subtitle-item">
+              <label for="subtitleBg">🟥 자막 배경색</label>
+              <input type="color" id="subtitleBg" value="#000000" />
+            </div>
+          </div>
+          <div style="margin-top:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary); cursor:pointer;">
+              <input type="checkbox" id="subtitleBgEnabled" style="accent-color:var(--accent-violet);" checked />
+              자막 배경박스 사용
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary); cursor:pointer;">
+              <input type="checkbox" id="subtitleOutline" style="accent-color:var(--accent-violet);" checked />
+              외곽선 사용
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--accent-violet); cursor:pointer;" onclick="showUpgradeModal(event)">
+              <input type="checkbox" disabled />
+              🔒 워터마크 끄기 (Pro)
+            </label>
+          </div>
+        </div>
+
+        <div class="bgm-panel">
+          <p class="sidebar-section-title">🎵 BGM (선택)</p>
+          <div class="bgm-grid">
+            <button class="bgm-item selected" data-bgm="none" onclick="selectBGM(this, 'none')">
+              <span class="bgm-emoji">🔇</span> BGM 없음
+            </button>
+            <button class="bgm-item disabled" data-bgm="upbeat" title="준비중 — 음원 파일 추가 예정">
+              <span class="bgm-emoji">☀️</span> 활기찬 (준비중)
+            </button>
+            <button class="bgm-item disabled" data-bgm="calm" title="준비중 — 음원 파일 추가 예정">
+              <span class="bgm-emoji">🌊</span> 잔잔한 (준비중)
+            </button>
+          </div>
+          <div class="bgm-upload-row">
+            <span>🎵 직접 업로드:</span>
+            <input type="file" id="bgmFileInput" accept="audio/mp3,audio/wav,audio/m4a,.mp3,.wav,.m4a" />
+          </div>
+          <div class="bgm-volume">
+            <span>🔈</span>
+            <input type="range" id="bgmVolume" min="0" max="100" value="30" />
+            <span id="bgmVolumeLabel">30%</span>
+            <span>🔊</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ STEP 5 — 발행/예약 ═══ -->
+  <section class="wizard-step" data-step="5">
+    <h1 class="wizard-question">언제 올릴까요?</h1>
+    <p class="wizard-sub">지금 바로 올리거나, 원하는 시간에 예약할 수 있어요.</p>
+
+    <div class="choice-card-grid single-col" id="publishChoiceCards">
+      <button class="choice-card" onclick="chooseNow(this)">
+        <span class="choice-icon">🚀</span><span class="choice-label">지금 바로 올리기</span>
+      </button>
+      <button class="choice-card" onclick="chooseSchedule(this)">
+        <span class="choice-icon">📅</span><span class="choice-label">나중에 예약하기</span>
+      </button>
     </div>
 
-    <!-- ═══ 예약 / 즉시발행 관리 ═══ -->
-    <div class="card anchor-target" id="scheduleAnchor">
-      <p class="section-title">⏰ 예약 / 즉시 발행</p>
+    <div id="scheduleDetail" style="display:none;">
+      <div class="schedule-row">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label" for="scheduleDate">날짜</label>
+          <input type="date" class="form-input" id="scheduleDate" />
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label" for="scheduleTime">시간</label>
+          <input type="time" class="form-input" id="scheduleTime" />
+        </div>
+        <button class="btn-schedule" onclick="handleScheduleClick()" id="scheduleBtn">📅 예약</button>
+      </div>
 
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;">
         <a class="btn-sm" href="/auth/tiktok/login" target="_blank" rel="noopener" style="text-decoration:none; flex:1; text-align:center;">🔗 틱톡 연결</a>
         <a class="btn-sm" href="/auth/meta/login" target="_blank" rel="noopener" style="text-decoration:none; flex:1; text-align:center;">🔗 인스타·페북 연결</a>
       </div>
-      <p class="text-muted" style="margin-bottom:14px;">틱톡/인스타·페북 즉시 발행은 최초 1회 위 버튼으로 계정을 연결해야 동작합니다 (네이버는 클립보드 복사 방식, X는 연결 불필요)</p>
+      <p class="text-muted" style="margin-top:10px;">즉시 발행은 최초 1회 위 버튼으로 계정을 연결해야 동작합니다 (네이버는 클립보드 복사 방식, X는 연결 불필요)</p>
 
-      <div class="schedule-area">
-        <div class="schedule-row">
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label" for="scheduleDate">날짜</label>
-            <input type="date" class="form-input" id="scheduleDate" />
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label" for="scheduleTime">시간</label>
-            <input type="time" class="form-input" id="scheduleTime" />
-          </div>
-          <button class="btn-schedule" onclick="schedulePost()" id="scheduleBtn">📅 예약</button>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn-sm" onclick="handleQuickAction('publish')" style="flex:1; padding:10px; text-align:center; background:rgba(124, 58, 237, 0.2); border:1px solid rgba(124, 58, 237, 0.5);">
-          🚀 <span id="quickPublishText">인스타그램 바로 발행</span>
-        </button>
-        <button class="btn-sm" onclick="handleQuickAction('copy')" style="flex:1; padding:10px; text-align:center;">
-          📋 <span id="quickCopyText">인스타그램 복사 후 이동</span>
-        </button>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="section-title">📋 예약 목록</div>
+      <div class="section-title" style="margin-top:20px;">📋 예약 목록</div>
       <div class="schedule-list" id="scheduleList">
         <div class="empty-state"><span class="empty-icon">📅</span>예약된 게시물이 없습니다</div>
       </div>
       <button class="btn-sm" onclick="loadScheduledPosts()" style="margin-top:8px; width:100%; text-align:center;">🔄 목록 새로고침</button>
     </div>
 
-    <!-- ═══ FAQ ═══ -->
-    <section class="faq-section">
-      <h2 class="faq-title">자주 묻는 질문 (FAQ)</h2>
-      <div class="faq-list">
-        <div class="faq-item">
-          <div class="faq-question">Q. 정말 저비용으로 운영되나요? <span>▼</span></div>
-          <div class="faq-answer">네. 영상 처리는 사용자 서버의 FFmpeg를 직접 활용하고, 이미지 자동생성은 무료 서비스(Pollinations.ai)를 사용하며, 원고 생성은 Gemini 무료 티어를 사용해 월 $1 이하로 운영할 수 있습니다.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-question">Q. 영상 스타일 분석은 영상 전체를 분석하나요? <span>▼</span></div>
-          <div class="faq-answer">아니요. 비용 절감을 위해 영상 전체가 아니라 균등 간격의 프레임 몇 장만 캡처해 분석합니다.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-question">Q. 스타일 클론은 실제로 사이트를 분석하나요? <span>▼</span></div>
-          <div class="faq-answer">현재는 데모 기능으로, 실제로 외부 사이트에 접속하지 않고 입력한 URL을 기반으로 준비된 스타일 프리셋 중 하나를 추천해드립니다.</div>
-        </div>
+    <p class="wizard-help-link" onclick="copyAndAlert(state.platform)">또는 원고만 복사해서 직접 올릴게요</p>
+  </section>
+
+  <!-- ═══ 완료 화면 ═══ -->
+  <div class="wizard-complete" id="wizardComplete">
+    <span class="complete-icon">🎉</span>
+    <h2 class="complete-title">완료됐어요!</h2>
+    <p class="complete-sub" id="completeMessage">게시물이 성공적으로 처리됐어요.</p>
+    <button class="wizard-next-btn" style="max-width:280px; margin-top:8px;" onclick="restartWizard()">새 게시물 만들기</button>
+  </div>
+
+  <p class="wizard-help-link" onclick="toggleFaq()">도움말 / 자주 묻는 질문</p>
+  <section class="faq-section" id="faqSection" style="display:none; margin-top:12px;">
+    <h2 class="faq-title">자주 묻는 질문 (FAQ)</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-question">Q. 정말 저비용으로 운영되나요? <span>▼</span></div>
+        <div class="faq-answer">네. 영상 처리는 서버의 FFmpeg를 직접 활용하고, 이미지 자동생성은 무료 서비스(Pollinations.ai)를 사용하며, 원고 생성은 Gemini 무료 티어를 사용해 월 $1 이하로 운영할 수 있습니다.</div>
       </div>
-    </section>
+      <div class="faq-item">
+        <div class="faq-question">Q. 영상 스타일 분석은 영상 전체를 분석하나요? <span>▼</span></div>
+        <div class="faq-answer">아니요. 비용 절감을 위해 영상 전체가 아니라 균등 간격의 프레임 몇 장만 캡처해 분석합니다.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">Q. 스타일 클론은 실제로 사이트를 분석하나요? <span>▼</span></div>
+        <div class="faq-answer">현재는 데모 기능으로, 실제로 외부 사이트에 접속하지 않고 입력한 URL을 기반으로 준비된 스타일 프리셋 중 하나를 추천해드립니다.</div>
+      </div>
+    </div>
+  </section>
 
-  </div><!-- /main-col -->
+</div><!-- /wizard-shell -->
 
-</div><!-- /app-shell -->
+<!-- 하단 고정: 다음 버튼 (스텝 1, 5, 완료화면에서는 숨김) -->
+<div class="wizard-nav" id="wizardNav">
+  <div class="wizard-nav-inner">
+    <button class="wizard-next-btn" id="wizardNextBtn" onclick="nextStep()">다음 →</button>
+  </div>
+</div>
 
 <div class="toast-container" id="toastContainer"></div>
 
