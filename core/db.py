@@ -35,6 +35,7 @@ def init_db():
             hashtags      TEXT,
             media_path    TEXT,
             bgm_path      TEXT,
+            timeline_data TEXT,
             scheduled_at  DATETIME NOT NULL,
             status        TEXT    DEFAULT 'pending',
             error_msg     TEXT,
@@ -77,6 +78,12 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # 이미 컬럼이 존재하는 경우
 
+    # 타임라인 에디터 도입 이전 DB에는 timeline_data 컬럼이 없을 수 있으므로 안전하게 추가 시도
+    try:
+        cursor.execute("ALTER TABLE scheduled_posts ADD COLUMN timeline_data TEXT")
+    except sqlite3.OperationalError:
+        pass  # 이미 컬럼이 존재하는 경우
+
     conn.commit()
     conn.close()
     print("[DB] 초기화 완료:", DB_PATH)
@@ -85,15 +92,16 @@ def init_db():
 # ─── 예약 발행 CRUD ──────────────────────────────────────────
 
 def create_scheduled_post(platform, content, caption, hashtags,
-                           scheduled_at, title=None, media_path=None, bgm_path=None):
+                           scheduled_at, title=None, media_path=None, bgm_path=None,
+                           timeline_data=None):
     """예약 발행 게시물 저장"""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO scheduled_posts
-            (platform, title, content, caption, hashtags, media_path, bgm_path, scheduled_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (platform, title, content, caption, hashtags, media_path, bgm_path, scheduled_at))
+            (platform, title, content, caption, hashtags, media_path, bgm_path, timeline_data, scheduled_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (platform, title, content, caption, hashtags, media_path, bgm_path, timeline_data, scheduled_at))
     post_id = cursor.lastrowid
     conn.commit()
     conn.close()

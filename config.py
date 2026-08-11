@@ -9,6 +9,12 @@ from dotenv import load_dotenv
 # .env 파일 로드
 load_dotenv()
 
+# Pillow 10+에서 Image.ANTIALIAS가 제거됐지만 moviepy==1.0.3이 여전히 참조한다 —
+# config.py는 영상 처리 모듈들보다 먼저 임포트되므로 여기서 호환 shim을 걸어둔다.
+from PIL import Image as _PILImage
+if not hasattr(_PILImage, "ANTIALIAS"):
+    _PILImage.ANTIALIAS = _PILImage.LANCZOS
+
 # ─── 기본 경로 설정 ─────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
 UPLOAD_DIR = BASE_DIR / "uploads"
@@ -68,6 +74,7 @@ FLASK_DEBUG = os.getenv("FLASK_ENV", "development") == "development"
 # ─── 파일 업로드 설정 ────────────────────────────────────────
 ALLOWED_VIDEO_EXTENSIONS = {"mp4", "mov", "avi", "mkv", "webm"}
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
+ALLOWED_AUDIO_EXTENSIONS = {"mp3", "wav", "m4a"}
 MAX_UPLOAD_SIZE_MB = 200              # 최대 200MB
 
 # ─── 수익 모델(플랜) 설정 ────────────────────────────────────────

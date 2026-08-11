@@ -4,6 +4,7 @@ app.py — Flask 메인 애플리케이션
 """
 
 import os
+import sys
 import json
 import uuid
 import time
@@ -13,13 +14,19 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect
 from werkzeug.utils import secure_filename
 
+# Windows 한글 콘솔(cp949)은 이모지를 인코딩하지 못해 print()에서 그대로 죽는다 —
+# 표준출력을 UTF-8로 강제해 어떤 콘솔 코드페이지에서도 안전하게 로그를 찍도록 한다.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 from config import (
     FLASK_SECRET_KEY, FLASK_DEBUG,
     UPLOAD_DIR, OUTPUT_DIR,
-    ALLOWED_VIDEO_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS,
+    ALLOWED_VIDEO_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS, ALLOWED_AUDIO_EXTENSIONS,
     MAX_UPLOAD_SIZE_MB, PLATFORM_SETTINGS, PLANS,
 )
-from core.db import init_db, create_scheduled_post, get_all_scheduled_posts, delete_scheduled_post, save_oauth_token
+from core.db import init_db, create_scheduled_post, get_all_scheduled_posts, delete_scheduled_post, save_oauth_token, get_oauth_token
 from core.ai_writer import generate_content
 
 # ─── Flask 앱 초기화 ──────────────────────────────────────────
@@ -42,6 +49,8 @@ def allowed_file(filename: str, file_type: str = "video") -> bool:
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if file_type == "video":
         return ext in ALLOWED_VIDEO_EXTENSIONS
+    if file_type == "audio":
+        return ext in ALLOWED_AUDIO_EXTENSIONS
     return ext in ALLOWED_IMAGE_EXTENSIONS
 
 
@@ -152,8 +161,12 @@ def api_upload_video():
     if file.filename == "":
         return jsonify({"success": False, "error": "파일을 선택해주세요"}), 400
 
-    if not allowed_file(file.filename, "video"):
-        return jsonify({"success": False, "error": "지원하지 않는 파일 형식입니다 (mp4, mov, avi, mkv, webm)"}), 400
+    # 타임라인 에디터는 영상/이미지를 모두 이 엔드포인트로 업로드하므로 둘 다 허용
+    if not (allowed_file(file.filename, "video") or allowed_file(file.filename, "image")):
+        return jsonify({
+            "success": False,
+            "error": "지원하지 않는 파일 형식입니다 (영상: mp4/mov/avi/mkv/webm, 이미지: jpg/jpeg/png/gif/webp)",
+        }), 400
 
     try:
         file_path = save_upload(file)
@@ -171,6 +184,30 @@ def api_upload_video():
 
     except Exception as e:
         print(f"[API /upload-video 오류] {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ─── API: BGM 업로드 (사용자 직접 업로드) ─────────────────────
+# static/assets/bgm/ 프리셋 음원 파일이 아직 준비되지 않아, 사용자가 직접
+# 보유한 BGM 파일을 업로드해 타임라인 합성에 쓸 수 있도록 하는 경로.
+
+@app.route("/api/upload-bgm", methods=["POST"])
+def api_upload_bgm():
+    if "bgm" not in request.files:
+        return jsonify({"success": False, "error": "BGM 파일이 없습니다"}), 400
+
+    file = request.files["bgm"]
+    if file.filename == "":
+        return jsonify({"success": False, "error": "파일을 선택해주세요"}), 400
+
+    if not allowed_file(file.filename, "audio"):
+        return jsonify({"success": False, "error": "지원하지 않는 파일 형식입니다 (mp3, wav, m4a)"}), 400
+
+    try:
+        file_path = save_upload(file)
+        return jsonify({"success": True, "file_path": file_path})
+    except Exception as e:
+        print(f"[API /upload-bgm 오류] {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -216,6 +253,126 @@ def api_process_video():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# ─── API: 미디어 에디터 신규 기능 (프레임분석 / 스타일클론 / 이미지생성 / 타임라인합성) ──
+
+@app.route("/api/analyze-style", methods=["POST"])
+def api_analyze_style():
+    """
+    영상 진행 중간중간 프레임 몇 장만 캡처해 Gemini Vision으로 분석,
+    자막 위치/폰트크기/색상을 추천받는다 (영상 전체를 분석하지 않아 비용 절감).
+    """
+    try:
+        data = request.get_json()
+        video_path = data.get("video_path")
+
+        if not video_path or not Path(video_path).exists():
+            return jsonify({"success": False, "error": "영상 파일을 찾을 수 없습니다"}), 400
+
+        from core.video_style_analyzer import analyze_style
+        result = analyze_style(video_path)
+
+        return jsonify({"success": True, "data": result})
+
+    except Exception as e:
+        print(f"[API /analyze-style 오류] {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/style-clone", methods=["POST"])
+def api_style_clone():
+    """
+    타겟 URL을 입력받아 스타일(폰트/색상/톤)을 추천 — 데모용 더미 매칭(실제 URL 접속 없음)
+    """
+    try:
+        data = request.get_json()
+        target_url = data.get("target_url", "")
+
+        from core.style_clone import clone_style_from_url
+        result = clone_style_from_url(target_url)
+
+        return jsonify({"success": True, "data": result})
+
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        print(f"[API /style-clone 오류] {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/generate-image", methods=["POST"])
+def api_generate_image():
+    """
+    주제 텍스트만으로 이미지 생성 프롬프트를 만들고, 무료 이미지 생성 서비스로 실제 이미지를 생성한다.
+    """
+    try:
+        data = request.get_json()
+        topic = data.get("topic", "").strip()
+        platform = data.get("platform", "instagram")
+        business_type = data.get("business_type", "")
+        tone = data.get("tone", "친근한")
+
+        if not topic:
+            return jsonify({"success": False, "error": "주제를 입력해주세요"}), 400
+
+        from core.image_writer import generate_image_from_topic
+        result = generate_image_from_topic(topic, platform, business_type, tone)
+
+        return jsonify({"success": True, "data": result})
+
+    except Exception as e:
+        print(f"[API /generate-image 오류] {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/compose-timeline", methods=["POST"])
+def api_compose_timeline():
+    """
+    타임라인 에디터에 배치된 클립들(이미지 기본 2초/영상 기본 4초)을 순서대로 이어붙이고
+    자막/BGM까지 합성해 최종 영상을 만든다.
+
+    Request JSON:
+        clips: [{path, type, duration}, ...]
+        platform: str
+        subtitle_text: str (선택)
+        subtitle_options: dict (선택)
+        bgm_path: str (선택)
+    """
+    try:
+        data = request.get_json()
+        clips = data.get("clips", [])
+        platform = data.get("platform", "instagram")
+        subtitle_text = data.get("subtitle_text", "")
+        subtitle_options = data.get("subtitle_options", {})
+        bgm_path = data.get("bgm_path")
+
+        if not clips:
+            return jsonify({"success": False, "error": "타임라인에 클립이 없습니다"}), 400
+
+        from core.video_composer import VideoComposer
+        composer = VideoComposer()
+        output_path = composer.compose_timeline(
+            clips=clips,
+            platform=platform,
+            subtitle_text=subtitle_text,
+            subtitle_options=subtitle_options,
+            bgm_path=bgm_path,
+        )
+
+        return jsonify({"success": True, "data": {"output_path": output_path}})
+
+    except Exception as e:
+        print(f"[API /compose-timeline 오류] {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/connection-status", methods=["GET"])
+def api_connection_status():
+    """네이버/틱톡/메타(인스타/페북) OAuth 연결 상태 조회 — 좌측 설정 패널 표시용"""
+    platforms = ["naver_blog", "tiktok", "instagram", "facebook"]
+    status = {p: get_oauth_token(p) is not None for p in platforms}
+    return jsonify({"success": True, "data": status})
+
+
 @app.route("/api/download/<filename>", methods=["GET"])
 def api_download(filename):
     """
@@ -256,6 +413,9 @@ def api_schedule():
         hashtags_list = data.get("hashtags", [])
         hashtags_str = " ".join(hashtags_list) if isinstance(hashtags_list, list) else hashtags_list
 
+        timeline = data.get("timeline")
+        timeline_json = json.dumps(timeline, ensure_ascii=False) if timeline else None
+
         post_id = create_scheduled_post(
             platform=platform,
             title=data.get("title", ""),
@@ -264,6 +424,7 @@ def api_schedule():
             hashtags=hashtags_str,
             scheduled_at=scheduled_at_str,
             media_path=data.get("media_path"),
+            timeline_data=timeline_json,
         )
 
         return jsonify({"success": True, "post_id": post_id})
