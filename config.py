@@ -69,7 +69,9 @@ TIKTOK_CLIENT_SECRET = os.getenv("TIKTOK_CLIENT_SECRET", "")
 
 # ─── Flask 설정 ──────────────────────────────────────────────
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
-FLASK_DEBUG = os.getenv("FLASK_ENV", "development") == "development"
+# 보안 기본값: FLASK_ENV를 깜빡 설정 안 해도(예: 배포 환경변수 누락) 안전한 쪽(운영모드)으로
+# 기본값이 잡히도록 한다. 로컬 개발 시엔 .env에 FLASK_ENV=development를 명시해야 디버그 모드가 켜진다.
+FLASK_DEBUG = os.getenv("FLASK_ENV", "production") == "development"
 
 # ─── 파일 업로드 설정 ────────────────────────────────────────
 ALLOWED_VIDEO_EXTENSIONS = {"mp4", "mov", "avi", "mkv", "webm"}

@@ -315,6 +315,40 @@ function toHexColor(name) {
 }
 
 /* ───────────────────────────────────────────────────────
+   사진 자동 분석 (Gemini Vision) — 사진 설명을 직접 안 써도 되게 해줌
+─────────────────────────────────────────────────────── */
+async function analyzePhoto() {
+  const imageClip = state.timeline.find(c => c.type === 'image');
+  if (!imageClip) {
+    showToast('타임라인에 사진이 있어야 자동 분석할 수 있어요', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('analyzePhotoBtn');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>분석 중...';
+
+  try {
+    const res = await fetch('/api/analyze-photo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_path: imageClip.path }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || '분석 실패');
+
+    document.getElementById('photoDesc').value = data.data.description;
+    showToast('🔍 사진 분석 완료! 설명이 자동으로 채워졌어요', 'success');
+  } catch (err) {
+    showToast(`사진 분석 실패: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
+}
+
+/* ───────────────────────────────────────────────────────
    스타일 클론(더미) — 실제 URL을 서버가 가져오지 않고, 준비된 프리셋 중 하나를 추천
 ─────────────────────────────────────────────────────── */
 async function applyStyleClone() {
@@ -726,17 +760,23 @@ function renderScheduleList(posts) {
   const STATUS_CLASS = { pending: 'status-pending', published: 'status-published', failed: 'status-failed' };
   const STATUS_TEXT  = { pending: '대기 중', published: '발행 완료', failed: '실패' };
 
-  list.innerHTML = posts.slice(0, 10).map(p => `
+  list.innerHTML = posts.slice(0, 10).map(p => {
+    let statusText = STATUS_TEXT[p.status] || p.status;
+    if (p.status === 'failed' && typeof p.retry_count === 'number') {
+      statusText = p.retry_count >= 3 ? '실패 (재시도 소진)' : `실패 (재시도 ${p.retry_count}/3)`;
+    }
+    return `
     <div class="schedule-item" id="schedule-item-${p.id}">
       <span>${PLATFORM_ICONS[p.platform] || '📄'}</span>
       <span style="flex:1; color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
         ${(p.content || '').substring(0, 30)}...
       </span>
       <span style="color:var(--text-muted); font-size:10px;">${(p.scheduled_at || '').substring(0, 16)}</span>
-      <span class="schedule-status ${STATUS_CLASS[p.status] || ''}">${STATUS_TEXT[p.status] || p.status}</span>
-      ${p.status === 'pending' ? `<button class="btn-delete-schedule" onclick="deleteScheduledPost(${p.id})" title="예약 취소">✕ 취소</button>` : ''}
+      <span class="schedule-status ${STATUS_CLASS[p.status] || ''}">${statusText}</span>
+      ${p.status === 'pending' || p.status === 'failed' ? `<button class="btn-delete-schedule" onclick="deleteScheduledPost(${p.id})" title="예약 취소">✕ 취소</button>` : ''}
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 /* ───────────────────────────────────────────────────────

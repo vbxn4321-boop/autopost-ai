@@ -3,7 +3,7 @@ core/db.py — SQLite 데이터베이스 초기화 및 CRUD 유틸리티
 """
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 import sys
 
@@ -39,6 +39,8 @@ def init_db():
             scheduled_at  DATETIME NOT NULL,
             status        TEXT    DEFAULT 'pending',
             error_msg     TEXT,
+            retry_count   INTEGER DEFAULT 0,
+            last_attempt_at DATETIME,
             created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
             published_at  DATETIME
         )
@@ -84,6 +86,16 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # 이미 컬럼이 존재하는 경우
 
+    # 재시도 로직 도입 이전 DB에는 retry_count/last_attempt_at 컬럼이 없을 수 있으므로 안전하게 추가 시도
+    try:
+        cursor.execute("ALTER TABLE scheduled_posts ADD COLUMN retry_count INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE scheduled_posts ADD COLUMN last_attempt_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+
     conn.commit()
     conn.close()
     print("[DB] 초기화 완료:", DB_PATH)
@@ -108,16 +120,26 @@ def create_scheduled_post(platform, content, caption, hashtags,
     return post_id
 
 
+MAX_RETRY_COUNT = 3
+RETRY_INTERVAL_MINUTES = 5
+
+
 def get_pending_posts():
-    """발행 대기 중인 게시물 조회"""
+    """
+    발행 대기 중인 게시물 + 재시도 대상(실패했지만 재시도 횟수가 남았고,
+    마지막 시도로부터 RETRY_INTERVAL_MINUTES가 지난) 게시물을 함께 조회
+    """
     conn = get_connection()
     cursor = conn.cursor()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    retry_cutoff = (datetime.now() - timedelta(minutes=RETRY_INTERVAL_MINUTES)).strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute("""
         SELECT * FROM scheduled_posts
-        WHERE status = 'pending' AND scheduled_at <= ?
+        WHERE (status = 'pending' AND scheduled_at <= ?)
+           OR (status = 'failed' AND retry_count < ?
+               AND (last_attempt_at IS NULL OR last_attempt_at <= ?))
         ORDER BY scheduled_at ASC
-    """, (now,))
+    """, (now, MAX_RETRY_COUNT, retry_cutoff))
     rows = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return rows
@@ -134,15 +156,29 @@ def get_all_scheduled_posts():
 
 
 def update_post_status(post_id, status, error_msg=None):
-    """게시물 상태 업데이트"""
+    """
+    게시물 상태 업데이트. status='failed'일 때는 last_attempt_at을 찍고
+    retry_count를 1 증가시켜 다음 재시도 시점(RETRY_INTERVAL_MINUTES 후)을 계산할 수 있게 한다.
+    """
     conn = get_connection()
     cursor = conn.cursor()
-    published_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S") if status == "published" else None
-    cursor.execute("""
-        UPDATE scheduled_posts
-        SET status = ?, error_msg = ?, published_at = ?
-        WHERE id = ?
-    """, (status, error_msg, published_at, post_id))
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    published_at = now_str if status == "published" else None
+
+    if status == "failed":
+        cursor.execute("""
+            UPDATE scheduled_posts
+            SET status = ?, error_msg = ?, published_at = ?,
+                last_attempt_at = ?, retry_count = retry_count + 1
+            WHERE id = ?
+        """, (status, error_msg, published_at, now_str, post_id))
+    else:
+        cursor.execute("""
+            UPDATE scheduled_posts
+            SET status = ?, error_msg = ?, published_at = ?, last_attempt_at = ?
+            WHERE id = ?
+        """, (status, error_msg, published_at, now_str, post_id))
+
     conn.commit()
     conn.close()
 

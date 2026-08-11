@@ -202,6 +202,46 @@ class VideoProcessor:
         print(f"[BGM] 완료: {output_path}")
         return output_path
 
+    # ─── 3-1. 워터마크 ────────────────────────────────────────────
+
+    def add_watermark(self, video_path: str, output_path: str = None,
+                       text: str = "AutoPost AI") -> str:
+        """
+        영상 우하단에 반투명 워터마크 텍스트를 삽입한다.
+        무료 플랜 기본 동작 (config.PLANS["FREE"]["watermark_removal"] == False일 때 호출됨).
+        """
+        from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
+
+        if output_path is None:
+            stem = Path(video_path).stem
+            output_path = str(OUTPUT_DIR / f"{stem}_wm.mp4")
+
+        print(f"[워터마크] 삽입 시작: {video_path}")
+        video = VideoFileClip(video_path)
+
+        watermark = (
+            TextClip(text, fontsize=max(14, int(video.w * 0.035)), color="white", font="NanumGothic")
+            .set_opacity(0.55)
+            .set_duration(video.duration)
+            .set_position(("right", "bottom"))
+            .margin(right=16, bottom=12, opacity=0)
+        )
+
+        final = CompositeVideoClip([video, watermark])
+        final.write_videofile(
+            output_path,
+            codec="libx264",
+            audio_codec="aac",
+            temp_audiofile="temp_audio_wm.m4a",
+            remove_temp=True,
+            logger=None,
+        )
+        final.close()
+        video.close()
+
+        print(f"[워터마크] 완료: {output_path}")
+        return output_path
+
     # ─── 4. 플랫폼별 해상도 변환 ─────────────────────────────────
 
     def resize_for_platform(self, video_path: str, platform: str,
@@ -292,6 +332,17 @@ class VideoProcessor:
                 final_path = str(OUTPUT_DIR / f"{stem}_final_{platform}.mp4")
                 shutil.copy2(current_path, final_path)
                 current_path = final_path
+
+            # Step 4: 워터마크 (무료 플랜 기본 동작 — 결제 연동 전까지는 항상 FREE로 취급)
+            # ImageMagick이 없는 환경에서도 렌더링 자체는 실패하지 않도록 워터마크만 건너뛴다.
+            from config import PLANS
+            if not PLANS["FREE"]["watermark_removal"]:
+                try:
+                    wm_path = str(OUTPUT_DIR / f"{stem}_final_{platform}_wm.mp4")
+                    current_path = self.add_watermark(current_path, wm_path)
+                    steps.append("watermark")
+                except Exception as e:
+                    print(f"[파이프라인] ⚠️ 워터마크 삽입 실패, 워터마크 없이 진행: {e}")
 
             print(f"[파이프라인] 완료! 단계: {steps}")
             return {

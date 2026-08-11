@@ -141,6 +141,16 @@ class VideoComposer:
         if bgm_path and os.path.exists(bgm_path):
             current_path = vp.add_bgm(current_path, bgm_path)
 
+        # 워터마크 (무료 플랜 기본 동작 — 결제 연동 전까지는 항상 FREE로 취급)
+        # 자막과 마찬가지로 ImageMagick이 필요한데, 없다고 전체 렌더링을 실패시키면 안 되므로
+        # 워터마크만 건너뛰고 나머지 결과물은 정상적으로 반환한다.
+        from config import PLANS
+        if not PLANS["FREE"]["watermark_removal"]:
+            try:
+                current_path = vp.add_watermark(current_path)
+            except Exception as e:
+                print(f"[Composer] ⚠️ 워터마크 삽입 실패, 워터마크 없이 진행: {e}")
+
         print(f"[Composer] 타임라인 합성 완료: {current_path}")
         return current_path
 

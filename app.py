@@ -278,6 +278,29 @@ def api_analyze_style():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route("/api/analyze-photo", methods=["POST"])
+def api_analyze_photo():
+    """
+    사진을 Gemini Vision으로 자동 분석해 사진 설명 문장을 반환한다.
+    (기존엔 사용자가 '사진 내용 설명'을 직접 입력해야 했는데, 이 API로 자동화 가능)
+    """
+    try:
+        data = request.get_json()
+        image_path = data.get("image_path")
+
+        if not image_path or not Path(image_path).exists():
+            return jsonify({"success": False, "error": "이미지 파일을 찾을 수 없습니다"}), 400
+
+        from core.ai_writer import analyze_photo
+        description = analyze_photo(image_path)
+
+        return jsonify({"success": True, "data": {"description": description}})
+
+    except Exception as e:
+        print(f"[API /analyze-photo 오류] {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route("/api/style-clone", methods=["POST"])
 def api_style_clone():
     """

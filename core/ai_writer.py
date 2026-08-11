@@ -109,6 +109,35 @@ def generate_content(
         return _fallback_response(platform, topic, error=str(e))
 
 
+def analyze_photo(image_path: str) -> str:
+    """
+    사진을 Gemini Vision으로 분석해 원고 작성에 참고할 한국어 설명 문장을 반환한다.
+    (PROJECT_PLAN.md에서 계획했던 '사진 자동 분석' 기능 — 기존에는 사용자가 사진 설명을
+    직접 입력해야 했는데, 이 함수는 그 설명을 AI가 대신 만들어준다.)
+    """
+    if not GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY가 설정되지 않아 사진 자동 분석을 사용할 수 없습니다")
+
+    from google import genai
+    from google.genai import types
+    from PIL import Image
+
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    img = Image.open(image_path)
+
+    prompt = (
+        "이 사진에 무엇이 보이는지 SNS 마케팅 원고 작성에 참고할 수 있도록 "
+        "한국어 1~2문장으로 설명해줘. 다른 말 없이 설명 문장만 출력해."
+    )
+
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=[prompt, img],
+        config=types.GenerateContentConfig(temperature=0.4, max_output_tokens=300),
+    )
+    return response.text.strip()
+
+
 def _normalize_result(result: dict, platform: str) -> dict:
     """플랫폼별로 다른 JSON 구조를 공통 구조로 정규화"""
     normalized = {
