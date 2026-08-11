@@ -430,12 +430,54 @@ def auth_tiktok_callback():
         return f"틱톡 로그인 처리 중 오류가 발생했습니다: {e}", 500
 
 
+@app.route("/auth/meta/login")
+def auth_meta_login():
+    from core.oauth_meta import get_authorize_url
+    state = secrets.token_urlsafe(16)
+    session["meta_oauth_state"] = state
+    return redirect(get_authorize_url(state))
+
+
+@app.route("/auth/meta/callback")
+def auth_meta_callback():
+    from core.oauth_meta import exchange_code_for_token, get_long_lived_token, get_page_and_ig_account
+    code = request.args.get("code")
+    state = request.args.get("state")
+
+    if not code or not state or state != session.get("meta_oauth_state"):
+        return "메타(페이스북) 로그인 인증에 실패했습니다 (state 불일치 또는 code 없음).", 400
+
+    try:
+        short_token = exchange_code_for_token(code)
+        long_token = get_long_lived_token(short_token)
+        page_info = get_page_and_ig_account(long_token)
+
+        page_extra = json.dumps({"page_id": page_info["page_id"], "page_name": page_info["page_name"]})
+        save_oauth_token("facebook", access_token=page_info["page_access_token"], extra_data=page_extra)
+
+        if page_info.get("ig_user_id"):
+            ig_extra = json.dumps({"ig_user_id": page_info["ig_user_id"], "page_id": page_info["page_id"]})
+            save_oauth_token("instagram", access_token=page_info["page_access_token"], extra_data=ig_extra)
+            return f"✅ 페이스북 '{page_info['page_name']}' 페이지 + 연결된 인스타그램 계정 연결 완료! 이 창을 닫고 발행을 진행하세요."
+
+        return f"✅ 페이스북 '{page_info['page_name']}' 페이지 연결 완료! (연결된 인스타그램 비즈니스 계정은 찾지 못했습니다.) 이 창을 닫고 발행을 진행하세요."
+    except Exception as e:
+        print(f"[Meta OAuth Callback 오류] {e}")
+        return f"메타 로그인 처리 중 오류가 발생했습니다: {e}", 500
+
+
 # ─── 정적 파일 서빙 ──────────────────────────────────────────
 
 @app.route("/outputs/<path:filename>")
 def serve_output(filename):
     """처리된 영상 파일 다운로드/스트리밍"""
     return send_from_directory(str(OUTPUT_DIR), filename)
+
+
+@app.route("/uploads/<path:filename>")
+def serve_upload(filename):
+    """업로드된 원본 이미지/영상 서빙 (인스타그램 등 공개 URL이 필요한 발행에 사용)"""
+    return send_from_directory(str(UPLOAD_DIR), filename)
 
 
 # ─── 앱 실행 ──────────────────────────────────────────────────

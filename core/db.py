@@ -59,16 +59,23 @@ def init_db():
         )
     """)
 
-    # OAuth 액세스 토큰 저장 테이블 (네이버/틱톡 등 사용자 로그인 인증 결과)
+    # OAuth 액세스 토큰 저장 테이블 (네이버/틱톡/메타 등 사용자 로그인 인증 결과)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS oauth_tokens (
             platform      TEXT PRIMARY KEY,
             access_token  TEXT NOT NULL,
             refresh_token TEXT,
             expires_at    DATETIME,
+            extra_data    TEXT,
             updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    # 기존 DB(마이그레이션 전)에는 extra_data 컬럼이 없을 수 있으므로 안전하게 추가 시도
+    try:
+        cursor.execute("ALTER TABLE oauth_tokens ADD COLUMN extra_data TEXT")
+    except sqlite3.OperationalError:
+        pass  # 이미 컬럼이 존재하는 경우
 
     conn.commit()
     conn.close()
@@ -174,19 +181,23 @@ def get_recent_history(limit=20):
 
 # ─── OAuth 토큰 CRUD ─────────────────────────────────────────
 
-def save_oauth_token(platform, access_token, refresh_token=None, expires_at=None):
-    """플랫폼별 OAuth 액세스 토큰 저장/갱신 (upsert)"""
+def save_oauth_token(platform, access_token, refresh_token=None, expires_at=None, extra_data=None):
+    """
+    플랫폼별 OAuth 액세스 토큰 저장/갱신 (upsert)
+    extra_data: 플랫폼별 부가 정보(JSON 문자열). 예) 메타의 page_id/ig_user_id
+    """
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO oauth_tokens (platform, access_token, refresh_token, expires_at, updated_at)
-        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        INSERT INTO oauth_tokens (platform, access_token, refresh_token, expires_at, extra_data, updated_at)
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         ON CONFLICT(platform) DO UPDATE SET
             access_token = excluded.access_token,
             refresh_token = excluded.refresh_token,
             expires_at = excluded.expires_at,
+            extra_data = excluded.extra_data,
             updated_at = CURRENT_TIMESTAMP
-    """, (platform, access_token, refresh_token, expires_at))
+    """, (platform, access_token, refresh_token, expires_at, extra_data))
     conn.commit()
     conn.close()
 

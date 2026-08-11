@@ -32,18 +32,24 @@ OPENAI_MODEL   = "gpt-4o-mini"
 WHISPER_MODEL = "base"                 # base / small / medium / large
 WHISPER_LANGUAGE = "ko"               # 한국어
 
-# ─── Instagram Meta Graph API ────────────────────────────────
-INSTAGRAM_ACCESS_TOKEN = os.getenv("INSTAGRAM_ACCESS_TOKEN", "")
-INSTAGRAM_USER_ID = os.getenv("INSTAGRAM_USER_ID", "")
+# ─── Meta (Instagram/Facebook) Graph API ─────────────────────
+# 앱 자격증명 — 실제 발행에 필요한 페이지/IG 액세스 토큰은 /auth/meta/login OAuth 로그인으로 발급됨
+META_APP_ID = os.getenv("META_APP_ID", "")
+META_APP_SECRET = os.getenv("META_APP_SECRET", "")
+
+# 인스타그램 media API는 image_url/video_url에 공개적으로 접근 가능한 절대 URL이 필요하다
+# (localhost는 메타 서버가 접근할 수 없으므로 배포된 Render 주소를 기본값으로 사용)
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://autopost-ai-bcwk.onrender.com")
 
 # ─── Naver API ───────────────────────────────────────────────
 NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID", "")
 NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET", "")
 NAVER_BLOG_ID = os.getenv("NAVER_BLOG_ID", "")
 
-# ─── OAuth 콜백 URI (네이버/틱톡 로그인 연동용) ────────────────
-NAVER_REDIRECT_URI = os.getenv("NAVER_REDIRECT_URI", "http://localhost:5000/auth/naver/callback")
-TIKTOK_REDIRECT_URI = os.getenv("TIKTOK_REDIRECT_URI", "http://localhost:5000/auth/tiktok/callback")
+# ─── OAuth 콜백 URI (네이버/틱톡/메타 로그인 연동용) ────────────
+NAVER_REDIRECT_URI = "https://autopost-ai-bcwk.onrender.com/auth/naver/callback"
+TIKTOK_REDIRECT_URI = "http://127.0.0.1:5000/auth/tiktok/callback"
+META_REDIRECT_URI = os.getenv("META_REDIRECT_URI", "https://autopost-ai-bcwk.onrender.com/auth/meta/callback")
 
 # ─── X (Twitter) API ─────────────────────────────────────────
 X_API_KEY = os.getenv("X_API_KEY", "")

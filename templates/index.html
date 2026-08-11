@@ -1732,10 +1732,10 @@
 
         <!-- 네이버/틱톡 계정 연결 (최초 1회 로그인 필요) -->
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
-          <a class="btn-sm" href="/auth/naver/login" target="_blank" rel="noopener" style="text-decoration:none; flex:1; text-align:center;">🔗 네이버 연결</a>
           <a class="btn-sm" href="/auth/tiktok/login" target="_blank" rel="noopener" style="text-decoration:none; flex:1; text-align:center;">🔗 틱톡 연결</a>
+          <a class="btn-sm" href="/auth/meta/login" target="_blank" rel="noopener" style="text-decoration:none; flex:1; text-align:center;">🔗 인스타·페북 연결</a>
         </div>
-        <p class="text-muted" style="margin-bottom:14px;">네이버/틱톡 즉시 발행은 최초 1회 위 버튼으로 계정을 연결해야 동작합니다 (X는 연결 불필요)</p>
+        <p class="text-muted" style="margin-bottom:14px;">틱톡/인스타·페북 즉시 발행은 최초 1회 위 버튼으로 계정을 연결해야 동작합니다 (네이버는 클립보드 복사 방식, X는 연결 불필요)</p>
 
         <div class="schedule-area">
           <div class="schedule-row">
@@ -2434,8 +2434,8 @@ async function publishNow(platform) {
 
   const platformName = PLATFORM_NAMES[platform] || platform;
 
-  // 발행 불가 플랫폼 체크
-  const unavailable = ['instagram', 'facebook', 'threads'];
+  // 발행 불가 플랫폼 체크 (스레드는 아직 메타 API 미지원)
+  const unavailable = ['threads'];
   if (unavailable.includes(platform)) {
     showToast(`${platformName}은(는) 현재 메타 개발자 인증 대기 중입니다. 곧 활성화됩니다!`, 'info');
     return;
@@ -2462,10 +2462,19 @@ async function publishNow(platform) {
     const result = await resp.json();
 
     if (result.success) {
-      const url = result.data?.url || '';
-      showToast(`🎉 ${platformName} 발행 성공!${url ? ' ' + url : ''}`, 'success');
+      // 네이버 블로그 등 반자동 발행: 클립보드 복사 + 글쓰기 페이지 새 창 열기
+      if (result.data?.manual_required && result.data?.write_url) {
+        const textToCopy = result.data.prepared_content || content;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          showToast('📋 원고가 클립보드에 복사됐습니다. 새 창에 붙여넣기 해주세요!', 'success');
+        });
+        window.open(result.data.write_url, '_blank');
+      } else {
+        const url = result.data?.url || '';
+        showToast(`🎉 ${platformName} 발행 성공!${url ? ' ' + url : ''}`, 'success');
+      }
 
-      // 틱톡 영상 필수 안내
+      // 틱톡 영상 필수 안내 등 부가 안내
       if (result.data?.note) {
         setTimeout(() => showToast(`📌 ${result.data.note}`, 'info'), 2000);
       }

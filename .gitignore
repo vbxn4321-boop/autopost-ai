@@ -1,0 +1,27 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# 환경변수 (API 키 보안)
+.env
+
+# 업로드/출력 파일
+uploads/
+outputs/
+data/posts.db
+
+# 임시 파일 (MoviePy)
+temp_audio.m4a
+temp_audio_bgm.m4a
+
+# 에디터
+.vscode/
+.idea/
+
+# Windows
+Thumbs.db
+desktop.ini

@@ -118,58 +118,40 @@ class Publisher:
     # ─────────────────────────────────────────────────────────
     def _publish_naver_blog(self, post: dict) -> dict:
         """
-        네이버 블로그 API를 통해 글 발행 (사용자 로그인 access_token 필요)
+        네이버 블로그 반자동 발행.
+
+        네이버는 외부 개발자에게 공식 블로그 글쓰기 API를 제공하지 않는다
+        (openapi.naver.com/blog/writePost.json 호출 시 "API does not exist" 반환, 실제 확인됨).
+        따라서 서버가 직접 글을 올리는 대신, 완성된 원고와 글쓰기 페이지 URL을 돌려주고
+        프론트엔드가 클립보드 복사 + 새 창 열기로 사용자의 마지막 붙여넣기/발행만 남기는
+        반자동 방식을 사용한다.
         """
-        from core.oauth_naver import refresh_access_token
-        access_token = self._get_valid_access_token("naver_blog", refresh_access_token)
-
-        if not access_token:
-            return {
-                "success": False,
-                "error": "네이버 계정 연결이 필요합니다. 브라우저에서 /auth/naver/login 에 접속해 먼저 로그인해주세요.",
-            }
-
-        title = post.get("title", "AutoPost AI 게시물")
+        title = post.get("title", "")
         content = post.get("content", "")
         hashtags = post.get("hashtags", "")
 
-        # 해시태그를 본문 끝에 추가
+        full_text = content
         if hashtags:
-            content += f"\n\n{hashtags}"
+            full_text += f"\n\n{hashtags}"
 
-        # 네이버 블로그 API 호출 (Client-Id/Secret 헤더가 아니라 사용자 access_token 사용)
-        url = "https://openapi.naver.com/blog/writePost.json"
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/x-www-form-urlencoded",
-        }
-        payload = {
-            "title": title,
-            "contents": content,
-        }
         if self.naver_blog_id:
-            payload["blogId"] = self.naver_blog_id
+            write_url = f"https://blog.naver.com/PostWriteForm.naver?blogId={self.naver_blog_id}"
+            blog_url = f"https://blog.naver.com/{self.naver_blog_id}"
+        else:
+            write_url = "https://blog.naver.com/"
+            blog_url = "https://blog.naver.com/"
 
-        try:
-            resp = requests.post(url, headers=headers, data=payload, timeout=30)
-            data = resp.json()
-
-            if resp.status_code == 200 and not data.get("errorCode") and not data.get("errorMessage"):
-                print(f"[Naver Blog] ✅ 발행 성공!")
-                return {
-                    "success": True,
-                    "url": f"https://blog.naver.com/{self.naver_blog_id}" if self.naver_blog_id else "https://blog.naver.com/",
-                    "platform": "naver_blog",
-                    "response": data,
-                }
-            else:
-                error_msg = data.get("errorMessage") or data.get("message") or str(data)
-                return {"success": False, "error": f"네이버 블로그 API 오류: {error_msg}"}
-
-        except requests.exceptions.Timeout:
-            return {"success": False, "error": "네이버 블로그 API 응답 시간 초과"}
-        except Exception as e:
-            return {"success": False, "error": f"네이버 블로그 발행 실패: {str(e)}"}
+        return {
+            "success": True,
+            "manual_required": True,
+            "url": blog_url,
+            "write_url": write_url,
+            "platform": "naver_blog",
+            "prepared_title": title,
+            "prepared_content": full_text,
+            "note": "네이버는 공식 자동 글쓰기 API가 없어 자동 게시가 불가능합니다. "
+                    "원고가 클립보드에 복사됩니다 — 새로 열리는 글쓰기 창에 붙여넣기 후 직접 발행해주세요.",
+        }
 
     # ─────────────────────────────────────────────────────────
     # 2. X (트위터) 발행
@@ -339,26 +321,176 @@ class Publisher:
             return {"success": False, "error": f"틱톡 발행 실패: {str(e)}"}
 
     # ─────────────────────────────────────────────────────────
-    # 4. 인스타그램 (메타 Graph API — 추후 활성화)
+    # 메타(페이스북/인스타그램) 공통 헬퍼
     # ─────────────────────────────────────────────────────────
-    def _publish_instagram(self, post: dict) -> dict:
-        """인스타그램 Graph API (메타 인증 대기 중)"""
-        return {
-            "success": False,
-            "error": "인스타그램은 현재 메타 개발자 계정 인증 대기 중입니다. 인증 완료 후 자동으로 활성화됩니다.",
-            "platform": "instagram",
-        }
+    def _build_public_media_url(self, media_path: str) -> str:
+        """로컬 파일 경로를 메타 API가 접근 가능한 공개 URL로 변환"""
+        from config import PUBLIC_BASE_URL, OUTPUT_DIR
+
+        p = Path(media_path).resolve()
+        filename = p.name
+        try:
+            p.relative_to(Path(OUTPUT_DIR).resolve())
+            return f"{PUBLIC_BASE_URL}/outputs/{filename}"
+        except ValueError:
+            return f"{PUBLIC_BASE_URL}/uploads/{filename}"
 
     # ─────────────────────────────────────────────────────────
-    # 5. 페이스북 (메타 Graph API — 추후 활성화)
+    # 4. 인스타그램 (메타 Graph API)
+    # ─────────────────────────────────────────────────────────
+    def _publish_instagram(self, post: dict) -> dict:
+        """인스타그램 비즈니스 계정에 게시 (사용자 로그인으로 연결된 페이지 액세스 토큰 필요)"""
+        token_row = get_oauth_token("instagram")
+        if not token_row:
+            return {
+                "success": False,
+                "error": "인스타그램 계정 연결이 필요합니다. 브라우저에서 /auth/meta/login 에 접속해 먼저 로그인해주세요.",
+            }
+
+        access_token = token_row["access_token"]
+        extra = json.loads(token_row.get("extra_data") or "{}")
+        ig_user_id = extra.get("ig_user_id")
+
+        if not ig_user_id:
+            return {
+                "success": False,
+                "error": "연결된 인스타그램 비즈니스 계정을 찾을 수 없습니다. 페이지에 인스타그램 계정이 연결되어 있는지 확인 후 /auth/meta/login 을 다시 진행해주세요.",
+            }
+
+        content = post.get("content", "")
+        hashtags = post.get("hashtags", "")
+        media_path = post.get("media_path", "")
+
+        caption = content
+        if hashtags:
+            caption += f" {hashtags}"
+
+        # 인스타그램은 텍스트 단독 게시가 불가능 — 미디어 없으면 안내 메시지 반환
+        if not media_path or not Path(media_path).exists():
+            return {
+                "success": True,
+                "url": "",
+                "platform": "instagram",
+                "note": "인스타그램은 사진 또는 영상이 필수입니다. 원고가 준비되었으니, 미디어를 첨부하여 다시 발행해주세요.",
+                "prepared_caption": caption[:2200],
+            }
+
+        try:
+            media_url = self._build_public_media_url(media_path)
+            ext = Path(media_path).suffix.lower()
+            is_video = ext in [".mp4", ".mov", ".avi", ".mkv", ".webm"]
+
+            graph_base = "https://graph.facebook.com/v19.0"
+            create_payload = {"caption": caption[:2200], "access_token": access_token}
+            if is_video:
+                create_payload["media_type"] = "REELS"
+                create_payload["video_url"] = media_url
+            else:
+                create_payload["image_url"] = media_url
+
+            resp = requests.post(f"{graph_base}/{ig_user_id}/media", data=create_payload, timeout=60)
+            data = resp.json()
+
+            if "id" not in data:
+                error_msg = data.get("error", {}).get("message", str(data))
+                return {"success": False, "error": f"인스타그램 미디어 생성 실패: {error_msg}"}
+
+            creation_id = data["id"]
+
+            # 영상은 메타 서버 처리 시간이 필요 — FINISHED 상태가 될 때까지 폴링 (최대 약 2분)
+            if is_video:
+                for _ in range(24):
+                    status_resp = requests.get(
+                        f"{graph_base}/{creation_id}",
+                        params={"fields": "status_code", "access_token": access_token},
+                        timeout=15,
+                    )
+                    status = status_resp.json().get("status_code")
+                    if status == "FINISHED":
+                        break
+                    if status == "ERROR":
+                        return {"success": False, "error": "인스타그램 영상 처리 중 오류가 발생했습니다."}
+                    time.sleep(5)
+
+            publish_resp = requests.post(
+                f"{graph_base}/{ig_user_id}/media_publish",
+                data={"creation_id": creation_id, "access_token": access_token},
+                timeout=30,
+            )
+            publish_data = publish_resp.json()
+
+            if "id" not in publish_data:
+                error_msg = publish_data.get("error", {}).get("message", str(publish_data))
+                return {"success": False, "error": f"인스타그램 게시 실패: {error_msg}"}
+
+            media_id = publish_data["id"]
+
+            permalink_resp = requests.get(
+                f"{graph_base}/{media_id}",
+                params={"fields": "permalink", "access_token": access_token},
+                timeout=15,
+            )
+            permalink = permalink_resp.json().get("permalink", "")
+
+            print(f"[Instagram] ✅ 게시 완료! Media ID: {media_id}")
+            return {
+                "success": True,
+                "url": permalink or "https://www.instagram.com/",
+                "platform": "instagram",
+                "media_id": media_id,
+            }
+
+        except Exception as e:
+            return {"success": False, "error": f"인스타그램 발행 실패: {str(e)}"}
+
+    # ─────────────────────────────────────────────────────────
+    # 5. 페이스북 (메타 Graph API)
     # ─────────────────────────────────────────────────────────
     def _publish_facebook(self, post: dict) -> dict:
-        """페이스북 Graph API (메타 인증 대기 중)"""
-        return {
-            "success": False,
-            "error": "페이스북은 현재 메타 개발자 계정 인증 대기 중입니다. 인증 완료 후 자동으로 활성화됩니다.",
-            "platform": "facebook",
-        }
+        """페이스북 페이지에 게시 (사용자 로그인으로 연결된 페이지 액세스 토큰 필요)"""
+        token_row = get_oauth_token("facebook")
+        if not token_row:
+            return {
+                "success": False,
+                "error": "페이스북 계정 연결이 필요합니다. 브라우저에서 /auth/meta/login 에 접속해 먼저 로그인해주세요.",
+            }
+
+        page_access_token = token_row["access_token"]
+        extra = json.loads(token_row.get("extra_data") or "{}")
+        page_id = extra.get("page_id")
+
+        if not page_id:
+            return {
+                "success": False,
+                "error": "연결된 페이스북 페이지 정보를 찾을 수 없습니다. /auth/meta/login 을 다시 진행해주세요.",
+            }
+
+        content = post.get("content", "")
+        hashtags = post.get("hashtags", "")
+        message = content
+        if hashtags:
+            message += f"\n\n{hashtags}"
+
+        try:
+            url = f"https://graph.facebook.com/v19.0/{page_id}/feed"
+            resp = requests.post(url, data={"message": message, "access_token": page_access_token}, timeout=30)
+            data = resp.json()
+
+            if resp.status_code == 200 and data.get("id"):
+                post_id = data["id"]
+                print(f"[Facebook] ✅ 게시 완료! Post ID: {post_id}")
+                return {
+                    "success": True,
+                    "url": f"https://www.facebook.com/{post_id}",
+                    "platform": "facebook",
+                    "post_id": post_id,
+                }
+            else:
+                error_msg = data.get("error", {}).get("message", str(data))
+                return {"success": False, "error": f"페이스북 API 오류: {error_msg}"}
+
+        except Exception as e:
+            return {"success": False, "error": f"페이스북 발행 실패: {str(e)}"}
 
     # ─────────────────────────────────────────────────────────
     # 6. 스레드 (메타 Threads API — 추후 활성화)
