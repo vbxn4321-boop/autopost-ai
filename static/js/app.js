@@ -11,6 +11,7 @@ const state = {
   bgmVolume: 0.3,
   brandProfile: null,        // { brand_name, business_type, location, tone, description, signature_items, keywords } | null
   userEmail: '',
+  loggedIn: false,
 };
 
 /* 서버가 메모리 부족 등으로 재시작되면 응답이 중간에 끊겨 res.json()이 그대로
@@ -96,11 +97,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   renderTimeline();
-  loadConnectionStatus();
   updateCharCounter();
   syncThemeToggleIcon();
   initApp();
-  // 마법사 스텝은 시작 화면(wizardIntro)에서 "시작하기"를 눌러야 진입함 — startWizard() 참고
+  // SNS 연결 상태(/api/connection-status)는 로그인 필요 라우트라 비로그인 방문자의
+  // 랜딩페이지 로딩 시점에는 부르지 않고, 마법사 진입(startWizard) 시점에 불러온다.
+  // 마법사 스텝은 시작 화면(wizardIntro)에서 "무료로 시작하기"를 눌러야 진입함
 });
 
 /* ───────────────────────────────────────────────────────
@@ -1096,8 +1098,9 @@ function goHome() {
    시작 화면 / 브랜드 설정 / 홈 화면
 ─────────────────────────────────────────────────────── */
 
-/* 앱 처음 로드 시: 로그인 여부부터 확인 → 로그인 안 됐으면 인증 화면만 보여주고 끝.
-   로그인 상태면 브랜드 프로필이 있는지에 따라 홈/인트로로 분기(기존 로직 그대로). */
+/* 앱 처음 로드 시: 로그인 여부와 상관없이 시작 화면(서비스 소개 랜딩페이지)을 먼저 보여준다.
+   백그라운드로 로그인 상태만 확인해서: 로그인 + 브랜드 프로필 있는 재방문자는 곧장 홈으로,
+   그 외(비로그인 방문자, 프로필 미설정 로그인 사용자)는 랜딩페이지에 그대로 머무른다. */
 async function initApp() {
   let me;
   try {
@@ -1107,12 +1110,14 @@ async function initApp() {
     me = { logged_in: false };
   }
 
-  if (!me.logged_in) {
-    showAuthScreen();
-    return;
+  state.loggedIn = !!me.logged_in;
+  state.userEmail = me.email || '';
+  updateNavAuthUI();
+
+  if (!state.loggedIn) {
+    return; // 랜딩페이지(wizardIntro)가 기본 active 상태 — 강제 로그인 벽 없음
   }
 
-  state.userEmail = me.email || '';
   const emailLabel = document.getElementById('homeUserEmail');
   if (emailLabel) emailLabel.textContent = me.email || '';
 
@@ -1126,10 +1131,8 @@ async function initApp() {
 
   if (state.brandProfile) {
     showHomeScreen();
-  } else {
-    document.querySelectorAll('.wizard-intro').forEach(el => el.classList.remove('active'));
-    document.getElementById('wizardIntro').classList.add('active');
   }
+  // 로그인은 했지만 프로필이 없으면 랜딩페이지에 그대로 두고, "무료로 시작하기" 클릭 시 브랜드 설정으로 보냄
 }
 
 /* ───────────────────────────────────────────────────────
@@ -1137,14 +1140,19 @@ async function initApp() {
 ─────────────────────────────────────────────────────── */
 let authMode = 'login'; // 'login' | 'signup'
 
-function showAuthScreen() {
-  document.querySelectorAll('.wizard-intro').forEach(el => el.classList.remove('active'));
-  document.getElementById('authScreen').classList.add('active');
-  document.getElementById('wizardTopbar').style.display = 'none';
+function updateNavAuthUI() {
+  const btn = document.getElementById('navAuthBtn');
+  if (!btn) return;
+  if (state.loggedIn) {
+    btn.textContent = state.userEmail ? `${state.userEmail} · 로그아웃` : '로그아웃';
+    btn.onclick = logout;
+  } else {
+    btn.textContent = '로그인';
+    btn.onclick = openLoginFromNav;
+  }
 }
 
-function toggleAuthMode() {
-  authMode = authMode === 'login' ? 'signup' : 'login';
+function syncAuthModeUI() {
   document.getElementById('authErrorMsg').textContent = '';
   if (authMode === 'signup') {
     document.getElementById('authSubtitle').textContent = '이메일과 비밀번호로 새 계정을 만드세요';
@@ -1155,6 +1163,46 @@ function toggleAuthMode() {
     document.getElementById('authSubmitBtn').textContent = '로그인';
     document.getElementById('authToggleLink').textContent = '계정이 없으신가요? 회원가입';
   }
+}
+
+function showAuthScreen() {
+  document.querySelectorAll('.wizard-intro').forEach(el => el.classList.remove('active'));
+  document.getElementById('authScreen').classList.add('active');
+  document.getElementById('wizardTopbar').style.display = 'none';
+}
+
+/* 시작 화면(랜딩페이지)으로 돌아가기 — authScreen에서 실수로 들어왔을 때 등 */
+function showIntroScreen() {
+  document.querySelectorAll('.wizard-intro').forEach(el => el.classList.remove('active'));
+  document.getElementById('wizardIntro').classList.add('active');
+  document.getElementById('wizardTopbar').style.display = 'none';
+}
+
+/* 우측 상단 "로그인" 버튼 → 로그인 모드로 인증 화면 열기 */
+function openLoginFromNav() {
+  authMode = 'login';
+  syncAuthModeUI();
+  showAuthScreen();
+}
+
+/* 랜딩페이지의 "무료로 시작하기" — 로그인 안 됐으면 회원가입부터, 됐으면 홈/브랜드설정으로 */
+function handleStartClick() {
+  if (!state.loggedIn) {
+    authMode = 'signup';
+    syncAuthModeUI();
+    showAuthScreen();
+    return;
+  }
+  if (state.brandProfile) {
+    showHomeScreen();
+  } else {
+    goToBrandSetup();
+  }
+}
+
+function toggleAuthMode() {
+  authMode = authMode === 'login' ? 'signup' : 'login';
+  syncAuthModeUI();
 }
 
 async function submitAuth() {
@@ -1184,7 +1232,26 @@ async function submitAuth() {
     if (!data.success) throw new Error(data.error || '처리에 실패했습니다');
 
     document.getElementById('authPasswordInput').value = '';
-    await initApp();
+    state.loggedIn = true;
+    state.userEmail = data.email || email;
+    updateNavAuthUI();
+
+    try {
+      const profRes = await fetch('/api/brand-profile');
+      const profData = await parseJsonResponse(profRes);
+      state.brandProfile = profData.success ? profData.data : null;
+    } catch (e) {
+      state.brandProfile = null;
+    }
+
+    const emailLabel = document.getElementById('homeUserEmail');
+    if (emailLabel) emailLabel.textContent = state.userEmail;
+
+    if (state.brandProfile) {
+      showHomeScreen();
+    } else {
+      goToBrandSetup();
+    }
   } catch (err) {
     errorMsg.textContent = err.message;
   } finally {
@@ -1197,15 +1264,24 @@ async function logout() {
   try {
     await fetch('/api/logout', { method: 'POST' });
   } catch (err) {
-    // 무시 — 어차피 아래에서 인증 화면으로 보냄
+    // 무시 — 어차피 아래에서 랜딩페이지로 보냄
   }
+  state.loggedIn = false;
+  state.userEmail = '';
   state.brandProfile = null;
+  updateNavAuthUI();
   document.getElementById('authEmailInput').value = '';
   document.getElementById('authPasswordInput').value = '';
-  showAuthScreen();
+  showIntroScreen();
 }
 
 function goToBrandSetup() {
+  if (!state.loggedIn) {
+    authMode = 'signup';
+    syncAuthModeUI();
+    showAuthScreen();
+    return;
+  }
   document.querySelectorAll('.wizard-intro').forEach(el => el.classList.remove('active'));
   document.getElementById('brandSetup').classList.add('active');
 }
@@ -1285,6 +1361,7 @@ function startWizard() {
     if (p.tone) document.getElementById('toneInput').value = p.tone;
   }
 
+  loadConnectionStatus(); // 로그인 필요 라우트라 실제 마법사 진입 시점에 불러온다
   goToWizardStep(1);
 }
 
