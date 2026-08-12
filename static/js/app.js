@@ -75,7 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
   loadScheduledPosts();
   loadConnectionStatus();
   updateCharCounter();
-  goToWizardStep(1);
+  syncThemeToggleIcon();
+  // 마법사 스텝은 시작 화면(wizardIntro)에서 "시작하기"를 눌러야 진입함 — startWizard() 참고
 });
 
 /* ───────────────────────────────────────────────────────
@@ -1040,4 +1041,33 @@ function restartWizard() {
   document.getElementById('wizardComplete').classList.remove('active');
   document.getElementById('wizardBackBtn').style.visibility = 'visible';
   goToWizardStep(1);
+}
+
+/* ───────────────────────────────────────────────────────
+   시작 화면 → 마법사 진입
+─────────────────────────────────────────────────────── */
+function startWizard() {
+  document.getElementById('wizardIntro').classList.remove('active');
+  document.getElementById('wizardTopbar').style.display = 'flex';
+  goToWizardStep(1);
+}
+
+/* ───────────────────────────────────────────────────────
+   다크/라이트 모드 전환 (선택은 localStorage에 저장)
+─────────────────────────────────────────────────────── */
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  try { localStorage.setItem('autopost_theme', theme); } catch (e) { /* 무시 */ }
+  syncThemeToggleIcon();
+}
+
+function syncThemeToggleIcon() {
+  const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = theme === 'light' ? '🌙' : '☀️';
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
 }

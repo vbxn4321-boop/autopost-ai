@@ -11,13 +11,40 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script>
+    // 라이트/다크 모드가 잠깐 잘못된 색으로 번쩍이지 않도록, CSS가 로드되기 전에 먼저 적용
+    (function () {
+      try {
+        var saved = localStorage.getItem('autopost_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', saved);
+      } catch (e) { /* localStorage 접근 불가 시 기본(다크) 유지 */ }
+    })();
+  </script>
 </head>
 <body class="wizard-body">
 
+<button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="화면 모드 전환">☀️</button>
+
 <div class="wizard-shell">
 
+  <!-- ═══ 시작 화면 — 이 플랫폼이 뭔지 먼저 소개 ═══ -->
+  <div class="wizard-intro active" id="wizardIntro">
+    <div class="intro-logo">🚀</div>
+    <h1 class="intro-title">AutoPost AI</h1>
+    <p class="intro-desc">
+      사진 한 장, 문장 한 줄이면 충분해요.<br>
+      AI가 SNS에 맞는 원고와 영상을 자동으로 만들어드려요.
+    </p>
+    <ul class="intro-points">
+      <li>✍️ 주제만 입력하면 AI가 원고를 대신 써드려요</li>
+      <li>🎬 사진·영상을 자동으로 이어붙여 영상으로 만들어요</li>
+      <li>🚀 인스타·틱톡·블로그 등에 바로 발행하거나 예약할 수 있어요</li>
+    </ul>
+    <button class="intro-start-btn" onclick="startWizard()">시작하기 →</button>
+  </div>
+
   <!-- 상단: 뒤로가기 + 진행 표시 -->
-  <div class="wizard-topbar">
+  <div class="wizard-topbar" id="wizardTopbar" style="display:none;">
     <button class="wizard-back" id="wizardBackBtn" onclick="prevStep()" disabled>‹</button>
     <div class="wizard-progress-dots" id="wizardDots">
       <span class="dot current" data-dot="1"></span>
@@ -30,7 +57,7 @@
   </div>
 
   <!-- ═══ STEP 1 — 어디에 올릴까요? ═══ -->
-  <section class="wizard-step active" data-step="1">
+  <section class="wizard-step" data-step="1">
     <h1 class="wizard-question">어디에 올릴까요?</h1>
     <p class="wizard-sub">한 곳을 골라주세요. 고르면 바로 다음으로 넘어가요.</p>
 
@@ -386,7 +413,7 @@
   <div class="modal-content">
     <button class="modal-close" onclick="hideUpgradeModal()">×</button>
     <div style="font-size:48px; margin-bottom:16px;">🚀</div>
-    <h2 style="font-size:24px; color:#fff; margin-bottom:8px;">무료 횟수 초과</h2>
+    <h2 style="font-size:24px; color:var(--text-primary); margin-bottom:8px;">무료 횟수 초과</h2>
     <p style="color:var(--text-secondary); font-size:14px;">무료 플랜의 일일 생성 한도를 모두 사용하셨습니다.<br>Pro 플랜으로 업그레이드하고 무제한 생성과 프리미엄 기능을 누려보세요!</p>
     <div class="pricing-tier">
       <div style="color:var(--accent-violet); font-weight:700; letter-spacing:1px;">PRO PLAN</div>
