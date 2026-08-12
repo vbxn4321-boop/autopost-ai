@@ -208,6 +208,8 @@ function updateClipDuration(index, value) {
 
 function renderTimeline() {
   const strip = document.getElementById('timelineStrip');
+  updateMediaAnalysisButtons();
+
   if (!state.timeline.length) {
     strip.innerHTML = '<div class="timeline-empty">아직 추가된 미디어가 없습니다 — 위에서 사진/영상을 올리거나 "주제로 이미지 자동생성"을 눌러보세요.</div>';
     return;
@@ -233,6 +235,25 @@ function renderTimeline() {
       </div>
     `;
   }).join('');
+}
+
+/* 타임라인에 해당 종류(영상/사진)의 클립이 없으면 관련 분석 버튼을 미리 비활성화해서
+   "타임라인에 영상/사진이 있어야 해요" 오류를 아예 안 만나게 한다 */
+function updateMediaAnalysisButtons() {
+  const hasVideo = state.timeline.some(c => c.type === 'video');
+  const hasImage = state.timeline.some(c => c.type === 'image');
+
+  const styleBtn = document.getElementById('analyzeStyleBtn');
+  if (styleBtn) {
+    styleBtn.disabled = !hasVideo;
+    styleBtn.title = hasVideo ? '' : '타임라인에 영상이 있어야 사용할 수 있어요';
+  }
+
+  const photoBtn = document.getElementById('analyzePhotoBtn');
+  if (photoBtn) {
+    photoBtn.disabled = !hasImage;
+    photoBtn.title = hasImage ? '' : '타임라인에 사진이 있어야 사용할 수 있어요';
+  }
 }
 
 /* ───────────────────────────────────────────────────────
