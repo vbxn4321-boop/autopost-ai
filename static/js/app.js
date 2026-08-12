@@ -11,6 +11,21 @@ const state = {
   bgmVolume: 0.3,
 };
 
+/* 서버가 메모리 부족 등으로 재시작되면 응답이 중간에 끊겨 res.json()이 그대로
+   "Unexpected end of JSON input" 같은 기술적 에러를 던진다 — 사용자에게는
+   이해할 수 있는 문구로 바꿔서 보여준다. */
+async function parseJsonResponse(res) {
+  const text = await res.text();
+  if (!text) {
+    throw new Error('서버가 응답하지 않았어요. 서버가 잠시 재시작 중일 수 있어요 — 잠시 후 다시 시도해주세요.');
+  }
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error('서버 응답을 처리하지 못했어요. 잠시 후 다시 시도해주세요.');
+  }
+}
+
 const PLATFORM_NAMES = {
   instagram:  '인스타그램',
   tiktok:     '틱톡',
@@ -140,7 +155,7 @@ async function uploadFile(file, type) {
     if (runSTT) progressLabel.textContent = 'Whisper STT 실행 중 (시간이 걸릴 수 있습니다)...';
 
     const res = await fetch('/api/upload-video', { method: 'POST', body: formData });
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
 
     if (!data.success) throw new Error(data.error || '업로드 실패');
 
@@ -247,7 +262,7 @@ async function generateImageFromTopic() {
         tone: document.getElementById('toneInput').value,
       }),
     });
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     if (!data.success) throw new Error(data.error || '이미지 생성 실패');
 
     addClipToTimeline(data.data.image_path, 'image', '자동생성 이미지');
@@ -281,7 +296,7 @@ async function analyzeVideoStyle() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ video_path: videoClip.path }),
     });
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     if (!data.success) throw new Error(data.error || '분석 실패');
 
     const style = data.data;
@@ -325,7 +340,7 @@ async function analyzePhoto() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_path: imageClip.path }),
     });
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     if (!data.success) throw new Error(data.error || '분석 실패');
 
     document.getElementById('photoDesc').value = data.data.description;
@@ -356,7 +371,7 @@ async function applyStyleClone() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ target_url: url }),
     });
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     if (!data.success) throw new Error(data.error || '스타일 클론 실패');
 
     const style = data.data;
@@ -401,7 +416,7 @@ async function handleBgmFileSelect(e) {
     const formData = new FormData();
     formData.append('bgm', file);
     const res = await fetch('/api/upload-bgm', { method: 'POST', body: formData });
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     if (!data.success) throw new Error(data.error || 'BGM 업로드 실패');
 
     state.customBgmPath = data.file_path;
@@ -452,7 +467,7 @@ async function generateContent() {
       }),
     });
 
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     if (!data.success) throw new Error(data.error || '생성 실패');
 
     const result = data.data;
@@ -526,7 +541,7 @@ async function composeTimeline() {
       }),
     });
 
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     if (!data.success) throw new Error(data.error || '합성 실패');
 
     const output_path = data.data.output_path;
@@ -680,7 +695,7 @@ async function schedulePost() {
       }),
     });
 
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     if (data.success) {
       showToast(`📅 ${PLATFORM_NAMES[state.platform]} 게시물 예약 완료! (ID: ${data.post_id})`, 'success');
       loadScheduledPosts();
@@ -700,7 +715,7 @@ async function deleteScheduledPost(postId) {
   if (!confirm('이 예약 게시물을 취소하시겠습니까?')) return;
   try {
     const res = await fetch(`/api/schedule/${postId}`, { method: 'DELETE' });
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     if (data.success) {
       const el = document.getElementById(`schedule-item-${postId}`);
       if (el) {
@@ -726,7 +741,7 @@ async function deleteScheduledPost(postId) {
 async function loadScheduledPosts() {
   try {
     const res = await fetch('/api/scheduled-posts');
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     renderScheduleList(data.data || []);
   } catch (err) {
     // 서버 미실행 시 무시
@@ -769,7 +784,7 @@ function renderScheduleList(posts) {
 async function loadConnectionStatus() {
   try {
     const res = await fetch('/api/connection-status');
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     if (!data.success) return;
     Object.entries(data.data).forEach(([platform, connected]) => {
       const dot = document.getElementById(`conn-${platform}`);
@@ -816,7 +831,7 @@ async function publishNow(platform) {
       }),
     });
 
-    const result = await resp.json();
+    const result = await parseJsonResponse(resp);
 
     if (result.success) {
       if (result.data?.manual_required && result.data?.write_url) {
@@ -938,12 +953,22 @@ function prevStep() {
 
 function updateNextButton() {
   const btn = document.getElementById('wizardNextBtn');
+  btn.textContent = '다음 →';
   if (currentStep === 2) {
     btn.disabled = !document.getElementById('topicInput').value.trim();
   } else if (currentStep === 4) {
     btn.disabled = !document.getElementById('editorArea').value.trim();
   } else {
     btn.disabled = false;
+  }
+}
+
+/* 시작화면과 각 스텝이 같은 하단 버튼을 공유 — 지금 보이는 화면에 맞는 동작으로 분기 */
+function handleWizardNavClick() {
+  if (document.getElementById('wizardIntro').classList.contains('active')) {
+    startWizard();
+  } else {
+    nextStep();
   }
 }
 

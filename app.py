@@ -172,6 +172,12 @@ def api_upload_video():
         file_path = save_upload(file)
         response = {"success": True, "file_path": file_path, "transcript": ""}
 
+        # 휴대폰 원본 사진처럼 지나치게 큰 이미지는 줄여서 저장 — 영상 합성 시
+        # 메모리 사용량을 낮춰 메모리가 작은 서버에서 다운되는 것을 방지
+        if allowed_file(file.filename, "image"):
+            from core.image_writer import downscale_image_if_needed
+            downscale_image_if_needed(file_path)
+
         # STT 실행 요청이 있으면 Whisper로 음성 추출
         run_stt = request.form.get("run_stt", "false").lower() == "true"
         if run_stt:

@@ -15,6 +15,27 @@ from config import GEMINI_API_KEY, GEMINI_MODEL, UPLOAD_DIR
 
 POLLINATIONS_BASE_URL = "https://image.pollinations.ai/prompt"
 
+MAX_IMAGE_DIMENSION = 2000  # 이보다 큰 사진(주로 휴대폰 원본 사진)은 줄여서 저장
+
+
+def downscale_image_if_needed(image_path: str, max_dim: int = MAX_IMAGE_DIMENSION) -> None:
+    """
+    업로드/생성된 이미지가 너무 크면(특히 휴대폰 원본 사진은 4000px가 넘기도 함) 줄여서
+    저장한다. 영상 합성(moviepy) 단계의 메모리 사용량을 크게 낮춰, 메모리가 작은
+    서버(예: Render 무료 플랜 512MB)에서 서버가 다운되는 것을 방지하기 위함이다.
+    실패해도 원본을 그대로 쓰면 되므로 예외를 삼키고 넘어간다.
+    """
+    from PIL import Image
+    try:
+        with Image.open(image_path) as img:
+            if max(img.size) <= max_dim:
+                return
+            img.thumbnail((max_dim, max_dim), Image.LANCZOS)
+            img.convert("RGB").save(image_path, quality=88)
+            print(f"[ImageWriter] 이미지 축소 완료: {image_path} -> {img.size}")
+    except Exception as e:
+        print(f"[ImageWriter] 이미지 축소 실패(원본 그대로 사용): {e}")
+
 
 def generate_image_prompt(topic: str, platform: str = "instagram",
                            business_type: str = "", tone: str = "친근한") -> str:
@@ -78,6 +99,7 @@ def generate_image(prompt: str, width: int = 1080, height: int = 1920) -> str:
     with open(save_path, "wb") as f:
         f.write(resp.content)
 
+    downscale_image_if_needed(str(save_path))
     return str(save_path)
 
 

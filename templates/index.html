@@ -27,20 +27,33 @@
 
 <div class="wizard-shell">
 
-  <!-- ═══ 시작 화면 — 이 플랫폼이 뭔지 먼저 소개 ═══ -->
+  <!-- ═══ 시작 화면 — 이 플랫폼이 뭔지 한눈에 먼저 소개 ═══ -->
   <div class="wizard-intro active" id="wizardIntro">
-    <div class="intro-logo">🚀</div>
-    <h1 class="intro-title">AutoPost AI</h1>
-    <p class="intro-desc">
-      사진 한 장, 문장 한 줄이면 충분해요.<br>
-      AI가 SNS에 맞는 원고와 영상을 자동으로 만들어드려요.
+    <div class="intro-logo intro-anim" style="--d:0s">🚀</div>
+    <h1 class="intro-title intro-anim" style="--d:0.08s">AutoPost AI</h1>
+    <p class="intro-hook intro-anim" style="--d:0.16s">
+      여러 SNS 계정에 일일이 사진 고르고, 글 쓰고, 하나하나 올리느라<br class="intro-hook-br">
+      시간 다 쓰고 계시지 않으셨나요?
     </p>
-    <ul class="intro-points">
-      <li>✍️ 주제만 입력하면 AI가 원고를 대신 써드려요</li>
-      <li>🎬 사진·영상을 자동으로 이어붙여 영상으로 만들어요</li>
-      <li>🚀 인스타·틱톡·블로그 등에 바로 발행하거나 예약할 수 있어요</li>
-    </ul>
-    <button class="intro-start-btn" onclick="startWizard()">시작하기 →</button>
+    <p class="intro-desc intro-anim" style="--d:0.24s">
+      사진 한 장, 문장 한 줄이면 충분해요.<br>
+      AI가 원고와 영상을 자동으로 만들어 <strong>인스타·틱톡·블로그</strong>에 올려드려요.
+    </p>
+
+    <div class="intro-feature-grid">
+      <div class="intro-feature intro-anim" style="--d:0.34s">
+        <span class="intro-feature-icon">✍️</span>
+        <span class="intro-feature-label">AI 원고 자동 작성</span>
+      </div>
+      <div class="intro-feature intro-anim" style="--d:0.44s">
+        <span class="intro-feature-icon">🎬</span>
+        <span class="intro-feature-label">사진·영상 자동 합성</span>
+      </div>
+      <div class="intro-feature intro-anim" style="--d:0.54s">
+        <span class="intro-feature-icon">🚀</span>
+        <span class="intro-feature-label">바로 발행 · 예약 발행</span>
+      </div>
+    </div>
   </div>
 
   <!-- 상단: 뒤로가기 + 진행 표시 -->
@@ -399,10 +412,11 @@
 
 </div><!-- /wizard-shell -->
 
-<!-- 하단 고정: 다음 버튼 (스텝 1, 5, 완료화면에서는 숨김) -->
+<!-- 하단 고정 CTA — 시작화면의 "시작하기"부터 각 스텝의 "다음"까지 같은 자리에서 이어짐
+     (스텝 1, 5, 완료화면에서는 숨김) -->
 <div class="wizard-nav" id="wizardNav">
   <div class="wizard-nav-inner">
-    <button class="wizard-next-btn" id="wizardNextBtn" onclick="nextStep()">다음 →</button>
+    <button class="wizard-next-btn" id="wizardNextBtn" onclick="handleWizardNavClick()">시작하기 →</button>
   </div>
 </div>
 
