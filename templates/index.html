@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SNS AI 자동 발행 시스템 | 소상공인 올인원 마케팅 툴</title>
-  <meta name="description" content="질문에 답하듯 몇 번만 누르면 인스타그램, 틱톡, 블로그용 원고와 영상을 AI가 자동으로 만들어 발행합니다." />
+  <meta name="description" content="질문에 답하듯 몇 번만 누르면 인스타그램, 페이스북, X, 스레드용 원고와 영상을 AI가 자동으로 만들어 발행합니다." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -159,14 +159,6 @@
         <span class="choice-icon">📸</span><span class="choice-label">인스타그램</span>
         <span class="conn-dot" id="conn-instagram"></span>
       </button>
-      <button class="choice-card platform-tab-row" data-platform="tiktok" id="tab-tiktok">
-        <span class="choice-icon">🎵</span><span class="choice-label">틱톡</span>
-        <span class="conn-dot" id="conn-tiktok"></span>
-      </button>
-      <button class="choice-card platform-tab-row" data-platform="naver_blog" id="tab-naver_blog">
-        <span class="choice-icon">📝</span><span class="choice-label">네이버 블로그</span>
-        <span class="conn-dot" id="conn-naver_blog"></span>
-      </button>
       <button class="choice-card platform-tab-row" data-platform="facebook" id="tab-facebook">
         <span class="choice-icon">📘</span><span class="choice-label">페이스북</span>
         <span class="conn-dot" id="conn-facebook"></span>
@@ -178,6 +170,7 @@
         <span class="choice-icon">🧵</span><span class="choice-label">스레드</span>
       </button>
     </div>
+    <p class="text-muted" style="margin-top:12px; text-align:center;">틱톡·네이버 블로그는 공식 자동 발행 API 제약으로 현재 목록에서 뺐어요 (지원되면 다시 추가할게요)</p>
   </section>
 
   <!-- ═══ STEP 2 — 무엇을 올릴까요? ═══ -->
@@ -448,10 +441,9 @@
       </div>
 
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;">
-        <a class="btn-sm" href="/auth/tiktok/login" target="_blank" rel="noopener" style="text-decoration:none; flex:1; text-align:center;">🔗 틱톡 연결</a>
-        <a class="btn-sm" href="/auth/meta/login" target="_blank" rel="noopener" style="text-decoration:none; flex:1; text-align:center;">🔗 인스타·페북 연결</a>
+        <a class="btn-sm" href="/auth/meta/login" target="_blank" rel="noopener" style="text-decoration:none; flex:1; text-align:center;">🔗 인스타·페북·스레드 연결</a>
       </div>
-      <p class="text-muted" style="margin-top:10px;">즉시 발행은 최초 1회 위 버튼으로 계정을 연결해야 동작합니다 (네이버는 클립보드 복사 방식, X는 연결 불필요)</p>
+      <p class="text-muted" style="margin-top:10px;">인스타·페북·스레드 즉시 발행은 최초 1회 위 버튼으로 계정을 연결해야 동작합니다 (X는 연결 불필요)</p>
     </div>
 
     <p class="wizard-help-link" onclick="copyAndAlert(state.platform)">또는 원고만 복사해서 직접 올릴게요</p>
