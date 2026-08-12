@@ -1017,18 +1017,23 @@ function goToWizardStep(n) {
     if (!isConnected) {
       publishCards.innerHTML = `
         <button class="choice-card" onclick="downloadText()">
-          <span class="choice-icon">📥</span><span class="choice-label">원고 다운로드<br><small style="font-size:13px;color:var(--text-muted);font-weight:normal;">(SNS 계정 연결 시 예약/게시 가능)</small></span>
+          <span class="choice-icon">📥</span><span class="choice-label" data-i18n="btn.download">텍스트 다운로드</span><br><small style="font-size:13px;color:var(--text-muted);font-weight:normal;">(SNS 계정 연결 시 예약/게시 가능)</small>
         </button>
       `;
     } else {
       publishCards.innerHTML = `
         <button class="choice-card" onclick="chooseNow(this)">
-          <span class="choice-icon">🚀</span><span class="choice-label">지금 바로 올리기</span>
+          <span class="choice-icon">🚀</span><span class="choice-label" data-i18n="btn.publish">지금 바로 올리기</span>
         </button>
         <button class="choice-card" onclick="chooseSchedule(this)">
-          <span class="choice-icon">📅</span><span class="choice-label">나중에 예약하기</span>
+          <span class="choice-icon">📅</span><span class="choice-label" data-i18n="btn.schedule">나중에 예약하기</span>
         </button>
       `;
+    }
+    
+    // 언어 설정 재적용 (동적 요소)
+    if (typeof updateLanguage === 'function') {
+      updateLanguage(currentLang);
     }
   }
 

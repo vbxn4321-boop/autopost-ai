@@ -67,6 +67,14 @@ X_ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET", "")
 TIKTOK_CLIENT_KEY = os.getenv("TIKTOK_CLIENT_KEY", "")
 TIKTOK_CLIENT_SECRET = os.getenv("TIKTOK_CLIENT_SECRET", "")
 
+# ─── Social Login API (Kakao / Google) ────────────────────────
+KAKAO_CLIENT_ID = os.getenv("KAKAO_CLIENT_ID", "")
+KAKAO_REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", f"{PUBLIC_BASE_URL}/auth/kakao/callback")
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", f"{PUBLIC_BASE_URL}/auth/google/callback")
+
 # ─── Flask 설정 ──────────────────────────────────────────────
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
 # 보안 기본값: FLASK_ENV를 깜빡 설정 안 해도(예: 배포 환경변수 누락) 안전한 쪽(운영모드)으로

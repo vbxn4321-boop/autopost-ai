@@ -145,6 +145,79 @@ def api_logout():
     return jsonify({"success": True})
 
 
+# ─── 소셜 로그인 (카카오 / 구글) ──────────────────────────────
+@app.route("/auth/kakao/login")
+def auth_kakao_login():
+    from core.oauth_social import get_kakao_auth_url
+    state = secrets.token_urlsafe(16)
+    session["kakao_oauth_state"] = state
+    url = get_kakao_auth_url(state)
+    if "error=" in url:
+        return f"<script>alert('카카오 로그인이 아직 준비되지 않았습니다 (API 키 누락).'); location.href='/';</script>"
+    return redirect(url)
+
+@app.route("/auth/kakao/callback")
+def auth_kakao_callback():
+    from core.oauth_social import get_kakao_user_info
+    code = request.args.get("code")
+    state = request.args.get("state")
+
+    if not code or not state or state != session.get("kakao_oauth_state"):
+        return redirect("/?error=kakao_auth_failed")
+
+    try:
+        user_info = get_kakao_user_info(code)
+        email = user_info["email"]
+        user = get_user_by_email(email)
+        if not user:
+            # Auto sign-up with random password for social users
+            user_id = create_user(email, generate_password_hash(secrets.token_urlsafe(16)))
+        else:
+            user_id = user["id"]
+        
+        session["user_id"] = user_id
+        return redirect("/")
+    except Exception as e:
+        print(f"[Kakao OAuth 오류] {e}")
+        return redirect("/?error=kakao_auth_error")
+
+
+@app.route("/auth/google/login")
+def auth_google_login():
+    from core.oauth_social import get_google_auth_url
+    state = secrets.token_urlsafe(16)
+    session["google_oauth_state"] = state
+    url = get_google_auth_url(state)
+    if "error=" in url:
+        return f"<script>alert('구글 로그인이 아직 준비되지 않았습니다 (API 키 누락).'); location.href='/';</script>"
+    return redirect(url)
+
+@app.route("/auth/google/callback")
+def auth_google_callback():
+    from core.oauth_social import get_google_user_info
+    code = request.args.get("code")
+    state = request.args.get("state")
+
+    if not code or not state or state != session.get("google_oauth_state"):
+        return redirect("/?error=google_auth_failed")
+
+    try:
+        user_info = get_google_user_info(code)
+        email = user_info["email"]
+        user = get_user_by_email(email)
+        if not user:
+            # Auto sign-up
+            user_id = create_user(email, generate_password_hash(secrets.token_urlsafe(16)))
+        else:
+            user_id = user["id"]
+        
+        session["user_id"] = user_id
+        return redirect("/")
+    except Exception as e:
+        print(f"[Google OAuth 오류] {e}")
+        return redirect("/?error=google_auth_error")
+
+
 @app.route("/api/me", methods=["GET"])
 def api_me():
     """현재 로그인 상태 조회 — 프론트 초기 진입 시 최우선으로 호출"""

@@ -31,10 +31,10 @@
 <body class="wizard-body">
 
 <div style="position: fixed; top: 12px; right: 12px; display: flex; gap: 8px; z-index: 1000; align-items: center;">
-  <button class="theme-toggle" id="installPwaBtn" onclick="installPWA()" title="앱 설치" style="position: static; font-size: 14px; padding: 4px 10px; display: none; width: auto; border-radius: 20px; font-weight: bold; background: var(--accent-violet); color: white;">📱 앱 설치</button>
-  <button class="theme-toggle" id="langToggleBtn" onclick="alert('준비중: 다국어(English) 지원이 곧 추가됩니다!')" title="언어 변경" style="position: static;">🌐</button>
+  <button class="theme-toggle" id="installPwaBtn" onclick="installPWA()" title="앱 설치" style="position: static; font-size: 14px; padding: 4px 10px; display: none; width: auto; border-radius: 20px; font-weight: bold; background: var(--accent-violet); color: white;" data-i18n="nav.install">📱 앱 설치</button>
+  <button class="theme-toggle" id="langToggleBtn" onclick="toggleLanguage()" title="언어 변경" style="position: static;">🌐</button>
   <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="화면 모드 전환" style="position: static;">☀️</button>
-  <button class="nav-auth-btn" id="navAuthBtn" onclick="openLoginFromNav()" style="position: static;">로그인</button>
+  <button class="nav-auth-btn" id="navAuthBtn" onclick="openLoginFromNav()" style="position: static;" data-i18n="nav.login">로그인</button>
 </div>
 
 <div class="wizard-shell">
@@ -42,17 +42,30 @@
   <!-- ═══ 로그인 / 회원가입 화면 ═══ -->
   <div class="wizard-intro" id="authScreen">
     <div class="intro-logo intro-anim" style="--d:0s">🚀</div>
-    <h1 class="intro-title intro-anim" style="--d:0.08s">AutoPost AI</h1>
-    <p class="intro-hook intro-anim" style="--d:0.16s" id="authSubtitle">로그인하고 시작하세요</p>
+    <h1 class="intro-title intro-anim" style="--d:0.08s" data-i18n="auth.title">AutoPost AI</h1>
+    <p class="intro-hook intro-anim" style="--d:0.16s" id="authSubtitle" data-i18n="auth.subtitle">로그인하고 시작하세요</p>
 
     <div class="card intro-anim" style="--d:0.24s; width:100%; max-width:420px; text-align:left; margin-top:8px;">
+      
+      <!-- 소셜 로그인 버튼 -->
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
+        <a href="/auth/kakao/login" style="display:block; width:100%; padding:12px; text-align:center; background:#FEE500; color:#000000; font-weight:bold; border-radius:8px; text-decoration:none;" data-i18n="auth.kakao">카카오로 시작하기</a>
+        <a href="/auth/google/login" style="display:block; width:100%; padding:12px; text-align:center; background:#FFFFFF; color:#333; font-weight:bold; border:1px solid #ddd; border-radius:8px; text-decoration:none;" data-i18n="auth.google">Google로 시작하기</a>
+      </div>
+
+      <div style="display:flex; align-items:center; margin: 16px 0;">
+        <div style="flex:1; height:1px; background:var(--border);"></div>
+        <span style="padding:0 10px; color:var(--text-muted); font-size:12px;">OR</span>
+        <div style="flex:1; height:1px; background:var(--border);"></div>
+      </div>
+
       <div class="form-group">
-        <label class="form-label" for="authEmailInput">이메일</label>
-        <input type="email" class="form-input" id="authEmailInput" placeholder="you@example.com" autocomplete="email" />
+        <label class="form-label" for="authEmailInput" data-i18n="auth.email.label">이메일</label>
+        <input type="email" class="form-input" id="authEmailInput" placeholder="you@example.com" autocomplete="email" data-i18n-placeholder="auth.email.placeholder" />
       </div>
       <div class="form-group" style="margin-bottom:0;">
-        <label class="form-label" for="authPasswordInput">비밀번호</label>
-        <input type="password" class="form-input" id="authPasswordInput" placeholder="8자 이상" autocomplete="current-password" />
+        <label class="form-label" for="authPasswordInput" data-i18n="auth.password.label">비밀번호</label>
+        <input type="password" class="form-input" id="authPasswordInput" placeholder="8자 이상" autocomplete="current-password" data-i18n-placeholder="auth.password.placeholder" />
       </div>
     </div>
 
