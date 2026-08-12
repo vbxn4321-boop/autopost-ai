@@ -27,8 +27,31 @@
 
 <div class="wizard-shell">
 
+  <!-- ═══ 로그인 / 회원가입 화면 — 항상 최우선으로 확인 ═══ -->
+  <div class="wizard-intro active" id="authScreen">
+    <div class="intro-logo intro-anim" style="--d:0s">🚀</div>
+    <h1 class="intro-title intro-anim" style="--d:0.08s">AutoPost AI</h1>
+    <p class="intro-hook intro-anim" style="--d:0.16s" id="authSubtitle">로그인하고 시작하세요</p>
+
+    <div class="card intro-anim" style="--d:0.24s; width:100%; max-width:420px; text-align:left; margin-top:8px;">
+      <div class="form-group">
+        <label class="form-label" for="authEmailInput">이메일</label>
+        <input type="email" class="form-input" id="authEmailInput" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label" for="authPasswordInput">비밀번호</label>
+        <input type="password" class="form-input" id="authPasswordInput" placeholder="8자 이상" autocomplete="current-password" />
+      </div>
+    </div>
+
+    <p id="authErrorMsg" style="color:#ff6b6b; min-height:18px; margin-top:10px; text-align:center;"></p>
+
+    <button class="intro-start-btn intro-anim" style="--d:0.34s; max-width:420px;" onclick="submitAuth()" id="authSubmitBtn">로그인</button>
+    <p class="wizard-help-link" onclick="toggleAuthMode()" id="authToggleLink">계정이 없으신가요? 회원가입</p>
+  </div>
+
   <!-- ═══ 시작 화면 — 이 플랫폼이 뭔지 한눈에 먼저 소개 ═══ -->
-  <div class="wizard-intro active" id="wizardIntro">
+  <div class="wizard-intro" id="wizardIntro">
     <div class="intro-logo intro-anim" style="--d:0s">🚀</div>
     <h1 class="intro-title intro-anim" style="--d:0.08s">AutoPost AI</h1>
     <p class="intro-hook intro-anim" style="--d:0.16s">
@@ -114,6 +137,11 @@
 
   <!-- ═══ 홈 화면 — 재방문 시 바로 여기로 옴 ═══ -->
   <div class="wizard-intro" id="homeScreen">
+    <div style="width:100%; max-width:420px; display:flex; justify-content:space-between; align-items:center;">
+      <span class="text-muted" id="homeUserEmail" style="font-size:13px;"></span>
+      <button class="btn-sm" onclick="logout()">로그아웃</button>
+    </div>
+
     <div class="card" style="width:100%; max-width:420px; text-align:left;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         <div>
@@ -165,6 +193,7 @@
       </button>
       <button class="choice-card platform-tab-row" data-platform="x_twitter" id="tab-x_twitter">
         <span class="choice-icon">🐦</span><span class="choice-label">X (트위터)</span>
+        <span class="conn-dot" id="conn-x_twitter"></span>
       </button>
       <button class="choice-card platform-tab-row" data-platform="threads" id="tab-threads">
         <span class="choice-icon">🧵</span><span class="choice-label">스레드</span>
@@ -442,8 +471,9 @@
 
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;">
         <a class="btn-sm" href="/auth/meta/login" target="_blank" rel="noopener" style="text-decoration:none; flex:1; text-align:center;">🔗 인스타·페북·스레드 연결</a>
+        <a class="btn-sm" href="/auth/x/login" target="_blank" rel="noopener" style="text-decoration:none; flex:1; text-align:center;">🔗 X(트위터) 연결</a>
       </div>
-      <p class="text-muted" style="margin-top:10px;">인스타·페북·스레드 즉시 발행은 최초 1회 위 버튼으로 계정을 연결해야 동작합니다 (X는 연결 불필요)</p>
+      <p class="text-muted" style="margin-top:10px;">각 플랫폼 즉시 발행은 최초 1회 위 버튼으로 본인 계정을 연결해야 동작합니다.</p>
     </div>
 
     <p class="wizard-help-link" onclick="copyAndAlert(state.platform)">또는 원고만 복사해서 직접 올릴게요</p>

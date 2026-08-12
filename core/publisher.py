@@ -20,7 +20,7 @@ class Publisher:
     def __init__(self):
         from config import (
             NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, NAVER_BLOG_ID,
-            X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET,
+            X_API_KEY, X_API_SECRET,
             TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET,
         )
         # Naver
@@ -28,11 +28,10 @@ class Publisher:
         self.naver_client_secret = NAVER_CLIENT_SECRET
         self.naver_blog_id = NAVER_BLOG_ID
 
-        # X (Twitter)
+        # X (Twitter) — consumer key/secret은 앱 식별용(공용), 실제 발행용
+        # access_token/secret은 사용자별로 oauth_tokens에서 조회한다 (아래 _publish_x_twitter 참고)
         self.x_api_key = X_API_KEY
         self.x_api_secret = X_API_SECRET
-        self.x_access_token = X_ACCESS_TOKEN
-        self.x_access_token_secret = X_ACCESS_TOKEN_SECRET
 
         # TikTok
         self.tiktok_client_key = TIKTOK_CLIENT_KEY
@@ -76,12 +75,12 @@ class Publisher:
     # ─────────────────────────────────────────────────────────
     # OAuth 토큰 조회 (필요 시 refresh_token으로 자동 갱신)
     # ─────────────────────────────────────────────────────────
-    def _get_valid_access_token(self, platform: str, refresh_fn) -> str:
+    def _get_valid_access_token(self, user_id: int, platform: str, refresh_fn) -> str:
         """
         DB에 저장된 access_token을 반환. 만료 시각이 지났으면 refresh_fn으로
         갱신을 시도하고 새 토큰을 저장한 뒤 반환한다. 저장된 토큰이 없으면 None.
         """
-        token_row = get_oauth_token(platform)
+        token_row = get_oauth_token(user_id, platform)
         if not token_row:
             return None
 
@@ -102,6 +101,7 @@ class Publisher:
                         ).strftime("%Y-%m-%d %H:%M:%S")
 
                     save_oauth_token(
+                        user_id,
                         platform,
                         access_token=new_token["access_token"],
                         refresh_token=new_token.get("refresh_token", token_row.get("refresh_token")),
@@ -159,21 +159,33 @@ class Publisher:
     def _publish_x_twitter(self, post: dict) -> dict:
         """
         X (Twitter) API v2를 통해 트윗 발행
-        tweepy 라이브러리 사용
+        tweepy 라이브러리 사용. access_token/secret은 사용자별로 3-legged OAuth 1.0a로
+        연결된 값을 oauth_tokens에서 조회한다(core/oauth_x.py 참고).
         """
-        if not all([self.x_api_key, self.x_api_secret, 
-                     self.x_access_token, self.x_access_token_secret]):
-            return {"success": False, "error": "X(트위터) API 키가 설정되지 않았습니다. .env 파일을 확인해주세요."}
+        if not self.x_api_key or not self.x_api_secret:
+            return {"success": False, "error": "X(트위터) 앱 키가 설정되지 않았습니다. .env 파일을 확인해주세요."}
+
+        token_row = get_oauth_token(post.get("user_id"), "x_twitter")
+        if not token_row:
+            return {
+                "success": False,
+                "error": "X(트위터) 계정 연결이 필요합니다. 브라우저에서 /auth/x/login 에 접속해 먼저 로그인해주세요.",
+            }
+
+        extra = json.loads(token_row.get("extra_data") or "{}")
+        access_token_secret = extra.get("access_token_secret")
+        if not access_token_secret:
+            return {"success": False, "error": "X(트위터) 연결 정보가 손상되었습니다. /auth/x/login 을 다시 진행해주세요."}
 
         try:
             import tweepy
 
-            # OAuth 1.0a 인증 (User Context)
+            # OAuth 1.0a 인증 (User Context) — 사용자별 access_token 사용
             client = tweepy.Client(
                 consumer_key=self.x_api_key,
                 consumer_secret=self.x_api_secret,
-                access_token=self.x_access_token,
-                access_token_secret=self.x_access_token_secret,
+                access_token=token_row["access_token"],
+                access_token_secret=access_token_secret,
             )
 
             content = post.get("content", "")
@@ -227,7 +239,7 @@ class Publisher:
         '포토 모드(이미지 슬라이드)' 형태로 게시하거나 알림만 반환
         """
         from core.oauth_tiktok import refresh_access_token
-        access_token = self._get_valid_access_token("tiktok", refresh_access_token)
+        access_token = self._get_valid_access_token(post.get("user_id"), "tiktok", refresh_access_token)
 
         if not access_token:
             return {
@@ -340,7 +352,7 @@ class Publisher:
     # ─────────────────────────────────────────────────────────
     def _publish_instagram(self, post: dict) -> dict:
         """인스타그램 비즈니스 계정에 게시 (사용자 로그인으로 연결된 페이지 액세스 토큰 필요)"""
-        token_row = get_oauth_token("instagram")
+        token_row = get_oauth_token(post.get("user_id"), "instagram")
         if not token_row:
             return {
                 "success": False,
@@ -448,7 +460,7 @@ class Publisher:
     # ─────────────────────────────────────────────────────────
     def _publish_facebook(self, post: dict) -> dict:
         """페이스북 페이지에 게시 (사용자 로그인으로 연결된 페이지 액세스 토큰 필요)"""
-        token_row = get_oauth_token("facebook")
+        token_row = get_oauth_token(post.get("user_id"), "facebook")
         if not token_row:
             return {
                 "success": False,

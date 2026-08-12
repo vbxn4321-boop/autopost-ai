@@ -10,6 +10,7 @@ const state = {
   customBgmPath: null,
   bgmVolume: 0.3,
   brandProfile: null,        // { brand_name, business_type, location, tone, description, signature_items, keywords } | null
+  userEmail: '',
 };
 
 /* 서버가 메모리 부족 등으로 재시작되면 응답이 중간에 끊겨 res.json()이 그대로
@@ -20,11 +21,18 @@ async function parseJsonResponse(res) {
   if (!text) {
     throw new Error('서버가 응답하지 않았어요. 서버가 잠시 재시작 중일 수 있어요 — 잠시 후 다시 시도해주세요.');
   }
+  let data;
   try {
-    return JSON.parse(text);
+    data = JSON.parse(text);
   } catch (e) {
     throw new Error('서버 응답을 처리하지 못했어요. 잠시 후 다시 시도해주세요.');
   }
+  // 세션이 만료/미로그인 상태로 API를 호출하면 모든 fetch가 이 함수를 거치므로
+  // 여기 한 곳에서만 처리해도 전체 화면에 일괄 적용된다.
+  if (res.status === 401) {
+    showAuthScreen();
+  }
+  return data;
 }
 
 const PLATFORM_NAMES = {
@@ -1088,8 +1096,26 @@ function goHome() {
    시작 화면 / 브랜드 설정 / 홈 화면
 ─────────────────────────────────────────────────────── */
 
-/* 앱 처음 로드 시: 브랜드 프로필이 있으면 바로 홈으로, 없으면 인트로(HTML 기본 상태)를 그대로 둠 */
+/* 앱 처음 로드 시: 로그인 여부부터 확인 → 로그인 안 됐으면 인증 화면만 보여주고 끝.
+   로그인 상태면 브랜드 프로필이 있는지에 따라 홈/인트로로 분기(기존 로직 그대로). */
 async function initApp() {
+  let me;
+  try {
+    const res = await fetch('/api/me');
+    me = await parseJsonResponse(res);
+  } catch (err) {
+    me = { logged_in: false };
+  }
+
+  if (!me.logged_in) {
+    showAuthScreen();
+    return;
+  }
+
+  state.userEmail = me.email || '';
+  const emailLabel = document.getElementById('homeUserEmail');
+  if (emailLabel) emailLabel.textContent = me.email || '';
+
   try {
     const res = await fetch('/api/brand-profile');
     const data = await parseJsonResponse(res);
@@ -1100,7 +1126,83 @@ async function initApp() {
 
   if (state.brandProfile) {
     showHomeScreen();
+  } else {
+    document.querySelectorAll('.wizard-intro').forEach(el => el.classList.remove('active'));
+    document.getElementById('wizardIntro').classList.add('active');
   }
+}
+
+/* ───────────────────────────────────────────────────────
+   로그인 / 회원가입 / 로그아웃
+─────────────────────────────────────────────────────── */
+let authMode = 'login'; // 'login' | 'signup'
+
+function showAuthScreen() {
+  document.querySelectorAll('.wizard-intro').forEach(el => el.classList.remove('active'));
+  document.getElementById('authScreen').classList.add('active');
+  document.getElementById('wizardTopbar').style.display = 'none';
+}
+
+function toggleAuthMode() {
+  authMode = authMode === 'login' ? 'signup' : 'login';
+  document.getElementById('authErrorMsg').textContent = '';
+  if (authMode === 'signup') {
+    document.getElementById('authSubtitle').textContent = '이메일과 비밀번호로 새 계정을 만드세요';
+    document.getElementById('authSubmitBtn').textContent = '회원가입';
+    document.getElementById('authToggleLink').textContent = '이미 계정이 있으신가요? 로그인';
+  } else {
+    document.getElementById('authSubtitle').textContent = '로그인하고 시작하세요';
+    document.getElementById('authSubmitBtn').textContent = '로그인';
+    document.getElementById('authToggleLink').textContent = '계정이 없으신가요? 회원가입';
+  }
+}
+
+async function submitAuth() {
+  const email = document.getElementById('authEmailInput').value.trim();
+  const password = document.getElementById('authPasswordInput').value;
+  const errorMsg = document.getElementById('authErrorMsg');
+  const btn = document.getElementById('authSubmitBtn');
+  errorMsg.textContent = '';
+
+  if (!email || !password) {
+    errorMsg.textContent = '이메일과 비밀번호를 모두 입력해주세요';
+    return;
+  }
+
+  const endpoint = authMode === 'signup' ? '/api/signup' : '/api/login';
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '처리 중...';
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await parseJsonResponse(res);
+    if (!data.success) throw new Error(data.error || '처리에 실패했습니다');
+
+    document.getElementById('authPasswordInput').value = '';
+    await initApp();
+  } catch (err) {
+    errorMsg.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+async function logout() {
+  try {
+    await fetch('/api/logout', { method: 'POST' });
+  } catch (err) {
+    // 무시 — 어차피 아래에서 인증 화면으로 보냄
+  }
+  state.brandProfile = null;
+  document.getElementById('authEmailInput').value = '';
+  document.getElementById('authPasswordInput').value = '';
+  showAuthScreen();
 }
 
 function goToBrandSetup() {

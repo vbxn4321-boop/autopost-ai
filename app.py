@@ -11,8 +11,10 @@ import time
 import secrets
 from pathlib import Path
 from datetime import datetime, timedelta
+from functools import wraps
 from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Windows 한글 콘솔(cp949)은 이모지를 인코딩하지 못해 print()에서 그대로 죽는다 —
 # 표준출력을 UTF-8로 강제해 어떤 콘솔 코드페이지에서도 안전하게 로그를 찍도록 한다.
@@ -29,6 +31,7 @@ from config import (
 from core.db import (
     init_db, create_scheduled_post, get_all_scheduled_posts, delete_scheduled_post,
     save_oauth_token, get_oauth_token, get_brand_profile, save_brand_profile,
+    create_user, get_user_by_email, get_user_by_id,
 )
 from core.ai_writer import generate_content
 
@@ -66,6 +69,22 @@ def save_upload(file) -> str:
     return str(save_path)
 
 
+def login_required(f):
+    """
+    로그인(세션에 user_id 저장) 여부를 확인하는 데코레이터.
+    fetch()로 호출되는 /api/* 라우트는 401 JSON을, 브라우저가 직접 이동하는
+    /auth/*/login 라우트는 홈으로 리다이렉트해 각각 프론트/사용자가 처리할 수 있게 한다.
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user_id" not in session:
+            if request.path.startswith("/auth/"):
+                return redirect("/")
+            return jsonify({"success": False, "error": "로그인이 필요합니다"}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
 # ─── 라우트 ──────────────────────────────────────────────────
 
 @app.route("/")
@@ -74,16 +93,86 @@ def index():
     return render_template("index.html", platforms=PLATFORM_SETTINGS)
 
 
+# ─── API: 계정 (회원가입 / 로그인 / 로그아웃) ────────────────
+
+@app.route("/api/signup", methods=["POST"])
+def api_signup():
+    """이메일+비밀번호 회원가입. 이메일 인증/비밀번호 재설정은 이번 범위 밖."""
+    try:
+        data = request.get_json() or {}
+        email = (data.get("email") or "").strip().lower()
+        password = data.get("password") or ""
+
+        if not email or "@" not in email:
+            return jsonify({"success": False, "error": "올바른 이메일을 입력해주세요"}), 400
+        if len(password) < 8:
+            return jsonify({"success": False, "error": "비밀번호는 8자 이상이어야 합니다"}), 400
+        if get_user_by_email(email):
+            return jsonify({"success": False, "error": "이미 가입된 이메일입니다"}), 400
+
+        user_id = create_user(email, generate_password_hash(password))
+        session["user_id"] = user_id
+        return jsonify({"success": True, "email": email})
+
+    except Exception as e:
+        print(f"[API /signup 오류] {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/login", methods=["POST"])
+def api_login():
+    """이메일+비밀번호 로그인"""
+    try:
+        data = request.get_json() or {}
+        email = (data.get("email") or "").strip().lower()
+        password = data.get("password") or ""
+
+        user = get_user_by_email(email)
+        if not user or not check_password_hash(user["password_hash"], password):
+            return jsonify({"success": False, "error": "이메일 또는 비밀번호가 올바르지 않습니다"}), 401
+
+        session["user_id"] = user["id"]
+        return jsonify({"success": True, "email": user["email"]})
+
+    except Exception as e:
+        print(f"[API /login 오류] {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/logout", methods=["POST"])
+def api_logout():
+    session.clear()
+    return jsonify({"success": True})
+
+
+@app.route("/api/me", methods=["GET"])
+def api_me():
+    """현재 로그인 상태 조회 — 프론트 초기 진입 시 최우선으로 호출"""
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"success": True, "logged_in": False})
+
+    user = get_user_by_id(user_id)
+    if not user:
+        # 세션은 있으나 계정이 사라진 경우(DB 초기화 등) — 세션 정리
+        session.clear()
+        return jsonify({"success": True, "logged_in": False})
+
+    return jsonify({"success": True, "logged_in": True, "email": user["email"]})
+
+
 # ─── API: 브랜드 프로필 (최초 1회 설정, 이후 모든 원고 생성에 자동 반영) ────
 
 @app.route("/api/brand-profile", methods=["GET"])
+@login_required
 def api_get_brand_profile():
     """저장된 브랜드 프로필 조회. 없으면 data: null (프론트에서 최초 방문 여부 판단에 사용)"""
-    profile = get_brand_profile()
+    profile = get_brand_profile(session["user_id"])
     return jsonify({"success": True, "data": profile})
 
 
 @app.route("/api/brand-profile", methods=["POST"])
+@login_required
 def api_save_brand_profile():
     """브랜드 프로필 저장/수정"""
     try:
@@ -96,6 +185,7 @@ def api_save_brand_profile():
             return jsonify({"success": False, "error": "가게 이름을 입력해주세요"}), 400
 
         save_brand_profile(
+            user_id=session["user_id"],
             brand_name=brand_name,
             business_type=data.get("business_type", "카페"),
             location=data.get("location", "서울"),
@@ -105,7 +195,7 @@ def api_save_brand_profile():
             keywords=data.get("keywords", ""),
         )
 
-        return jsonify({"success": True, "data": get_brand_profile()})
+        return jsonify({"success": True, "data": get_brand_profile(session["user_id"])})
 
     except Exception as e:
         print(f"[API /brand-profile 오류] {e}")
@@ -115,6 +205,7 @@ def api_save_brand_profile():
 # ─── API: 원고 생성 ──────────────────────────────────────────
 
 @app.route("/api/generate", methods=["POST"])
+@login_required
 def api_generate():
     """
     AI 원고 생성 API
@@ -155,7 +246,7 @@ def api_generate():
 
         # 브랜드 프로필이 설정되어 있으면 가게 이름/소개/대표 메뉴를 자동으로 반영,
         # 키워드는 요청에 없을 때만 프로필 값으로 보충
-        brand = get_brand_profile() or {}
+        brand = get_brand_profile(session["user_id"]) or {}
         keywords = keywords or brand.get("keywords", "")
 
         result = generate_content(
@@ -190,6 +281,7 @@ def tiktok_verification():
 # ─── API: 영상 업로드 ─────────────────────────────────────────
 
 @app.route("/api/upload-video", methods=["POST"])
+@login_required
 def api_upload_video():
     """
     영상 파일 업로드 + 선택적 Whisper STT 처리
@@ -247,6 +339,7 @@ def api_upload_video():
 # 보유한 BGM 파일을 업로드해 타임라인 합성에 쓸 수 있도록 하는 경로.
 
 @app.route("/api/upload-bgm", methods=["POST"])
+@login_required
 def api_upload_bgm():
     if "bgm" not in request.files:
         return jsonify({"success": False, "error": "BGM 파일이 없습니다"}), 400
@@ -269,6 +362,7 @@ def api_upload_bgm():
 # ─── API: 영상 처리 ───────────────────────────────────────────
 
 @app.route("/api/process-video", methods=["POST"])
+@login_required
 def api_process_video():
     """
     영상 합성 처리 (자막 + BGM + 리사이즈)
@@ -311,6 +405,7 @@ def api_process_video():
 # ─── API: 미디어 에디터 신규 기능 (프레임분석 / 스타일클론 / 이미지생성 / 타임라인합성) ──
 
 @app.route("/api/analyze-style", methods=["POST"])
+@login_required
 def api_analyze_style():
     """
     영상 진행 중간중간 프레임 몇 장만 캡처해 Gemini Vision으로 분석,
@@ -334,6 +429,7 @@ def api_analyze_style():
 
 
 @app.route("/api/analyze-photo", methods=["POST"])
+@login_required
 def api_analyze_photo():
     """
     사진을 Gemini Vision으로 자동 분석해 사진 설명 문장을 반환한다.
@@ -357,6 +453,7 @@ def api_analyze_photo():
 
 
 @app.route("/api/style-clone", methods=["POST"])
+@login_required
 def api_style_clone():
     """
     타겟 URL을 입력받아 스타일(폰트/색상/톤)을 추천 — 데모용 더미 매칭(실제 URL 접속 없음)
@@ -378,6 +475,7 @@ def api_style_clone():
 
 
 @app.route("/api/generate-image", methods=["POST"])
+@login_required
 def api_generate_image():
     """
     주제 텍스트만으로 이미지 생성 프롬프트를 만들고, 무료 이미지 생성 서비스로 실제 이미지를 생성한다.
@@ -403,6 +501,7 @@ def api_generate_image():
 
 
 @app.route("/api/compose-timeline", methods=["POST"])
+@login_required
 def api_compose_timeline():
     """
     타임라인 에디터에 배치된 클립들(이미지 기본 2초/영상 기본 4초)을 순서대로 이어붙이고
@@ -444,10 +543,11 @@ def api_compose_timeline():
 
 
 @app.route("/api/connection-status", methods=["GET"])
+@login_required
 def api_connection_status():
-    """네이버/틱톡/메타(인스타/페북) OAuth 연결 상태 조회 — 좌측 설정 패널 표시용"""
-    platforms = ["naver_blog", "tiktok", "instagram", "facebook"]
-    status = {p: get_oauth_token(p) is not None for p in platforms}
+    """네이버/틱톡/메타(인스타/페북)/X(트위터) OAuth 연결 상태 조회 — 좌측 설정 패널 표시용"""
+    platforms = ["naver_blog", "tiktok", "instagram", "facebook", "x_twitter"]
+    status = {p: get_oauth_token(session["user_id"], p) is not None for p in platforms}
     return jsonify({"success": True, "data": status})
 
 
@@ -465,6 +565,7 @@ def api_download(filename):
 # ─── API: 예약 발행 ───────────────────────────────────────────
 
 @app.route("/api/schedule", methods=["POST"])
+@login_required
 def api_schedule():
     """
     예약 발행 등록
@@ -495,6 +596,7 @@ def api_schedule():
         timeline_json = json.dumps(timeline, ensure_ascii=False) if timeline else None
 
         post_id = create_scheduled_post(
+            user_id=session["user_id"],
             platform=platform,
             title=data.get("title", ""),
             content=content,
@@ -513,17 +615,19 @@ def api_schedule():
 
 
 @app.route("/api/scheduled-posts", methods=["GET"])
+@login_required
 def api_scheduled_posts():
-    """예약 발행 목록 조회"""
-    posts = get_all_scheduled_posts()
+    """예약 발행 목록 조회 (본인 것만)"""
+    posts = get_all_scheduled_posts(session["user_id"])
     return jsonify({"success": True, "data": posts})
 
 
 @app.route("/api/schedule/<int:post_id>", methods=["DELETE"])
+@login_required
 def api_delete_schedule(post_id):
-    """예약 발행 취소(삭제)"""
+    """예약 발행 취소(삭제) — 본인 소유 게시물만 삭제 가능"""
     try:
-        success = delete_scheduled_post(post_id)
+        success = delete_scheduled_post(post_id, session["user_id"])
         if success:
             return jsonify({"success": True})
         else:
@@ -536,6 +640,7 @@ def api_delete_schedule(post_id):
 # ─── API: 즉시 발행 ───────────────────────────────────────────
 
 @app.route("/api/publish", methods=["POST"])
+@login_required
 def api_publish():
     """
     선택한 플랫폼으로 즉시 발행
@@ -571,6 +676,7 @@ def api_publish():
 
         post_data = {
             "id": f"instant_{int(time.time())}",
+            "user_id": session["user_id"],
             "platform": platform,
             "title": data.get("title", ""),
             "content": content,
@@ -597,6 +703,7 @@ def api_publish():
 # access_token(Bearer)이 있어야 한다. 아래 4개 라우트가 그 최초 1회 로그인을 처리한다.
 
 @app.route("/auth/naver/login")
+@login_required
 def auth_naver_login():
     from core.oauth_naver import get_authorize_url
     state = secrets.token_urlsafe(16)
@@ -605,6 +712,7 @@ def auth_naver_login():
 
 
 @app.route("/auth/naver/callback")
+@login_required
 def auth_naver_callback():
     from core.oauth_naver import exchange_code_for_token
     code = request.args.get("code")
@@ -620,6 +728,7 @@ def auth_naver_callback():
             expires_at = (datetime.now() + timedelta(seconds=int(token_data["expires_in"]))).strftime("%Y-%m-%d %H:%M:%S")
 
         save_oauth_token(
+            session["user_id"],
             "naver_blog",
             access_token=token_data["access_token"],
             refresh_token=token_data.get("refresh_token"),
@@ -632,6 +741,7 @@ def auth_naver_callback():
 
 
 @app.route("/auth/tiktok/login")
+@login_required
 def auth_tiktok_login():
     from core.oauth_tiktok import get_authorize_url, generate_pkce_pair
     state = secrets.token_urlsafe(16)
@@ -642,6 +752,7 @@ def auth_tiktok_login():
 
 
 @app.route("/auth/tiktok/callback")
+@login_required
 def auth_tiktok_callback():
     from core.oauth_tiktok import exchange_code_for_token
     code = request.args.get("code")
@@ -658,6 +769,7 @@ def auth_tiktok_callback():
             expires_at = (datetime.now() + timedelta(seconds=int(token_data["expires_in"]))).strftime("%Y-%m-%d %H:%M:%S")
 
         save_oauth_token(
+            session["user_id"],
             "tiktok",
             access_token=token_data["access_token"],
             refresh_token=token_data.get("refresh_token"),
@@ -670,6 +782,7 @@ def auth_tiktok_callback():
 
 
 @app.route("/auth/meta/login")
+@login_required
 def auth_meta_login():
     from core.oauth_meta import get_authorize_url
     state = secrets.token_urlsafe(16)
@@ -678,6 +791,7 @@ def auth_meta_login():
 
 
 @app.route("/auth/meta/callback")
+@login_required
 def auth_meta_callback():
     from core.oauth_meta import exchange_code_for_token, get_long_lived_token, get_page_and_ig_account
     code = request.args.get("code")
@@ -690,19 +804,59 @@ def auth_meta_callback():
         short_token = exchange_code_for_token(code)
         long_token = get_long_lived_token(short_token)
         page_info = get_page_and_ig_account(long_token)
+        user_id = session["user_id"]
 
         page_extra = json.dumps({"page_id": page_info["page_id"], "page_name": page_info["page_name"]})
-        save_oauth_token("facebook", access_token=page_info["page_access_token"], extra_data=page_extra)
+        save_oauth_token(user_id, "facebook", access_token=page_info["page_access_token"], extra_data=page_extra)
 
         if page_info.get("ig_user_id"):
             ig_extra = json.dumps({"ig_user_id": page_info["ig_user_id"], "page_id": page_info["page_id"]})
-            save_oauth_token("instagram", access_token=page_info["page_access_token"], extra_data=ig_extra)
+            save_oauth_token(user_id, "instagram", access_token=page_info["page_access_token"], extra_data=ig_extra)
             return f"✅ 페이스북 '{page_info['page_name']}' 페이지 + 연결된 인스타그램 계정 연결 완료! 이 창을 닫고 발행을 진행하세요."
 
         return f"✅ 페이스북 '{page_info['page_name']}' 페이지 연결 완료! (연결된 인스타그램 비즈니스 계정은 찾지 못했습니다.) 이 창을 닫고 발행을 진행하세요."
     except Exception as e:
         print(f"[Meta OAuth Callback 오류] {e}")
         return f"메타 로그인 처리 중 오류가 발생했습니다: {e}", 500
+
+
+@app.route("/auth/x/login")
+@login_required
+def auth_x_login():
+    from core.oauth_x import get_authorization_url_and_token
+    from config import PUBLIC_BASE_URL
+    callback_url = f"{PUBLIC_BASE_URL}/auth/x/callback"
+    try:
+        auth_url, request_token = get_authorization_url_and_token(callback_url)
+        session["x_request_token"] = request_token
+        return redirect(auth_url)
+    except Exception as e:
+        print(f"[X OAuth Login 오류] {e}")
+        return f"X(트위터) 로그인 시작에 실패했습니다: {e}", 500
+
+
+@app.route("/auth/x/callback")
+@login_required
+def auth_x_callback():
+    from core.oauth_x import exchange_verifier_for_token
+    verifier = request.args.get("oauth_verifier")
+    request_token = session.get("x_request_token")
+
+    if not verifier or not request_token:
+        return "X(트위터) 로그인 인증에 실패했습니다 (verifier 또는 request_token 없음).", 400
+
+    try:
+        access_token, access_token_secret = exchange_verifier_for_token(request_token, verifier)
+        save_oauth_token(
+            session["user_id"],
+            "x_twitter",
+            access_token=access_token,
+            extra_data=json.dumps({"access_token_secret": access_token_secret}),
+        )
+        return "✅ X(트위터) 계정 연결 완료! 이 창을 닫고 발행을 진행하세요."
+    except Exception as e:
+        print(f"[X OAuth Callback 오류] {e}")
+        return f"X(트위터) 로그인 처리 중 오류가 발생했습니다: {e}", 500
 
 
 # ─── 정적 파일 서빙 ──────────────────────────────────────────
