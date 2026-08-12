@@ -52,10 +52,14 @@ def generate_image_prompt(topic: str, platform: str = "instagram",
 
         client = genai.Client(api_key=GEMINI_API_KEY)
         instruction = (
-            "너는 SNS 마케팅 이미지 생성 프롬프트 작가야. 아래 정보를 바탕으로 "
-            "이미지 생성 AI(예: Stable Diffusion류)에 넣을 영어 프롬프트를 딱 한 줄로 작성해. "
-            "마크다운, 굵은글씨(**), 글머리표, 콜론으로 구분된 항목 나열, 줄바꿈, 따옴표를 "
-            "절대 쓰지 말고, 쉼표로 구분된 순수 영어 키워드/구절 나열 한 줄만 출력해."
+            "너는 SNS 마케팅 이미지 생성 프롬프트 작가야. 아래 주제에 등장하는 음식·제품·장면을 "
+            "절대 다른 것으로 바꾸지 말고, 반드시 그 대상 그대로 사진에 나오도록 영어 프롬프트를 만들어.\n"
+            "특히 한국 음식이나 한국 고유 표현이 나오면, 이미지 생성 AI가 그 단어만으로는 "
+            "정확히 모를 수 있으니 실제 생김새(재료, 색깔, 그릇에 담긴 모습, 곁들여지는 반찬 등)를 "
+            "영어로 구체적으로 풀어서 묘사해. 예를 들어 '백반정식'이면 그냥 'baekban'이라고만 쓰지 말고 "
+            "'Korean home-style set meal tray with steamed rice, soup, and several small side dishes "
+            "(banchan) like kimchi and seasoned vegetables'처럼 시각적으로 자세히 설명해.\n"
+            "출력은 쉼표로 구분된 영어 키워드/구절 한 줄만. 마크다운, 굵은글씨, 글머리표, 줄바꿈, 따옴표 금지."
         )
         user_prompt = f"주제: {topic}\n업종: {business_type}\n플랫폼: {platform}\n톤: {tone}"
 
@@ -64,8 +68,8 @@ def generate_image_prompt(topic: str, platform: str = "instagram",
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=instruction,
-                temperature=0.9,
-                max_output_tokens=200,
+                temperature=0.3,
+                max_output_tokens=250,
             ),
         )
         prompt = response.text.strip().strip('"')
