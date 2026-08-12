@@ -15,7 +15,7 @@ from config import GEMINI_API_KEY, GEMINI_MODEL, UPLOAD_DIR
 
 POLLINATIONS_BASE_URL = "https://image.pollinations.ai/prompt"
 
-MAX_IMAGE_DIMENSION = 2000  # 이보다 큰 사진(주로 휴대폰 원본 사진)은 줄여서 저장
+MAX_IMAGE_DIMENSION = 1600  # 이보다 큰 사진(주로 휴대폰 원본 사진)은 줄여서 저장 (메모리 절약 우선, SNS 화질엔 충분)
 
 
 def downscale_image_if_needed(image_path: str, max_dim: int = MAX_IMAGE_DIMENSION) -> None:

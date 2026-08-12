@@ -2,6 +2,7 @@
 core/video_composer.py — 이미지 슬라이드쇼 생성 엔진 + 타임라인 합성
 단일 이미지를 영상으로 변환하거나, 여러 이미지/영상 클립을 순서대로 이어붙인다.
 """
+import gc
 import os
 import sys
 import uuid
@@ -127,19 +128,30 @@ class VideoComposer:
                     c.close()
                 except Exception:
                     pass
+            moviepy_clips.clear()
+            # 클립들이 들고 있던 이미지/영상 프레임 메모리를 최대한 빨리 돌려준다
+            # (메모리가 작은 서버에서 다음 단계 진입 전에 여유를 확보하기 위함)
+            gc.collect()
 
         # 이어붙인 영상에 기존 자막/BGM 파이프라인을 그대로 재사용해 최종 합성
         from core.video_processor import VideoProcessor
         vp = VideoProcessor()
         current_path = concat_path
 
+        # 자막도 워터마크와 마찬가지로 ImageMagick이 필요하다 — 없거나 메모리가 부족해서
+        # 실패해도 자막 없이 나머지 결과물(영상 자체)은 정상적으로 돌려준다.
         if subtitle_text:
-            current_path = vp.add_subtitle_overlay(
-                current_path, subtitle_text, platform, subtitle_options=subtitle_options
-            )
+            try:
+                current_path = vp.add_subtitle_overlay(
+                    current_path, subtitle_text, platform, subtitle_options=subtitle_options
+                )
+            except Exception as e:
+                print(f"[Composer] ⚠️ 자막 삽입 실패, 자막 없이 진행: {e}")
+            gc.collect()
 
         if bgm_path and os.path.exists(bgm_path):
             current_path = vp.add_bgm(current_path, bgm_path)
+            gc.collect()
 
         # 워터마크 (무료 플랜 기본 동작 — 결제 연동 전까지는 항상 FREE로 취급)
         # 자막과 마찬가지로 ImageMagick이 필요한데, 없다고 전체 렌더링을 실패시키면 안 되므로
@@ -150,6 +162,7 @@ class VideoComposer:
                 current_path = vp.add_watermark(current_path)
             except Exception as e:
                 print(f"[Composer] ⚠️ 워터마크 삽입 실패, 워터마크 없이 진행: {e}")
+            gc.collect()
 
         print(f"[Composer] 타임라인 합성 완료: {current_path}")
         return current_path
