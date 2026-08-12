@@ -259,6 +259,7 @@ def api_generate():
             brand_name=brand.get("brand_name", ""),
             description=brand.get("description", ""),
             signature_items=brand.get("signature_items", ""),
+            user_id=session["user_id"],
         )
 
         # 횟수 증가
@@ -268,6 +269,34 @@ def api_generate():
 
     except Exception as e:
         print(f"[API /generate 오류] {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/refine-content", methods=["POST"])
+@login_required
+def api_refine_content():
+    """
+    AI 원고 다듬기 (요술봉) API
+    
+    Request JSON:
+        content: str
+        instruction: str
+    """
+    try:
+        data = request.get_json()
+        content = data.get("content", "").strip()
+        instruction = data.get("instruction", "").strip()
+        
+        if not content or not instruction:
+            return jsonify({"success": False, "error": "원고와 다듬기 지시사항이 필요합니다."}), 400
+            
+        from core.ai_writer import refine_content
+        refined = refine_content(content, instruction)
+        
+        return jsonify({"success": True, "data": {"content": refined}})
+        
+    except Exception as e:
+        print(f"[API /refine-content 오류] {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 

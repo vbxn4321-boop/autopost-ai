@@ -22,6 +22,7 @@ def generate_content(
     brand_name: str = "",
     description: str = "",
     signature_items: str = "",
+    user_id: int = 0,
 ) -> dict:
     """
     AI 원고 생성 메인 함수 (Google Gemini 사용)
@@ -100,6 +101,7 @@ def generate_content(
 
         # 히스토리 저장
         save_content_history(
+            user_id=user_id,
             platform=platform,
             topic=topic,
             business_type=business_type,
@@ -142,6 +144,39 @@ def analyze_photo(image_path: str) -> str:
         model=GEMINI_MODEL,
         contents=[prompt, img],
         config=types.GenerateContentConfig(temperature=0.4, max_output_tokens=300),
+    )
+    return response.text.strip()
+
+
+def refine_content(content: str, instruction: str) -> str:
+    """
+    작성된 원고를 주어진 지시사항(instruction)에 맞게 다듬는다 (요술봉 기능).
+    """
+    if not GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY가 설정되지 않아 다듬기 기능을 사용할 수 없습니다")
+
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=GEMINI_API_KEY)
+
+    prompt = f"""
+다음 원고를 수정해주세요.
+수정 지시사항: {instruction}
+
+[원본 원고]
+{content}
+
+주의: 수정된 원고 텍스트만 출력하세요. 앞뒤에 불필요한 설명(예: '수정된 원고입니다')을 붙이지 마세요.
+"""
+
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0.7, 
+            max_output_tokens=4000
+        ),
     )
     return response.text.strip()
 

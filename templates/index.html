@@ -9,6 +9,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <!-- PWA -->
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="AutoPost" />
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
   <script>
@@ -23,8 +30,12 @@
 </head>
 <body class="wizard-body">
 
-<button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="화면 모드 전환">☀️</button>
-<button class="nav-auth-btn" id="navAuthBtn" onclick="openLoginFromNav()">로그인</button>
+<div style="position: fixed; top: 12px; right: 12px; display: flex; gap: 8px; z-index: 1000; align-items: center;">
+  <button class="theme-toggle" id="installPwaBtn" onclick="installPWA()" title="앱 설치" style="position: static; font-size: 14px; padding: 4px 10px; display: none; width: auto; border-radius: 20px; font-weight: bold; background: var(--accent-violet); color: white;">📱 앱 설치</button>
+  <button class="theme-toggle" id="langToggleBtn" onclick="alert('준비중: 다국어(English) 지원이 곧 추가됩니다!')" title="언어 변경" style="position: static;">🌐</button>
+  <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="화면 모드 전환" style="position: static;">☀️</button>
+  <button class="nav-auth-btn" id="navAuthBtn" onclick="openLoginFromNav()" style="position: static;">로그인</button>
+</div>
 
 <div class="wizard-shell">
 
@@ -371,6 +382,7 @@
           <span class="editor-platform-badge" id="platformBadge">인스타그램</span>
         </div>
         <div class="editor-actions">
+          <button class="btn-sm" onclick="refineContentWithMagicWand()" title="AI 다듬기" id="magicWandBtn" style="color: var(--accent-violet); border-color: var(--accent-violet);"><span style="font-size:14px">✨</span> 요술봉</button>
           <button class="btn-sm" onclick="restoreOriginal()" title="원문 복구" id="restoreBtn" disabled>↩️ 복구</button>
           <button class="btn-sm" onclick="regenerateContent()" title="다시 쓰기" id="regenBtn" disabled>🔄 다시쓰기</button>
           <button class="btn-sm primary" onclick="copyToClipboard()" title="복사" id="copyBtn">📋 복사</button>

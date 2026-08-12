@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./venv/Scripts/python.exe -c ' *)",
+      "Bash(rm -f cookieA.txt cookieB.txt)",
+      "Bash(curl -s -c cookieA.txt -X POST http://127.0.0.1:5000/api/signup -H \"Content-Type: application/json\" -d '{\"email\":\"a@test.com\",\"password\":\"password123\"}')",
+      "Bash(curl -s -c cookieB.txt -X POST http://127.0.0.1:5000/api/signup -H \"Content-Type: application/json\" -d '{\"email\":\"b@test.com\",\"password\":\"password123\"}')",
+      "Bash(curl -s -b cookieA.txt -X POST http://127.0.0.1:5000/api/brand-profile -H \"Content-Type: application/json\" -d '{\"brand_name\":\"A가게\",\"business_type\":\"카페\",\"location\":\"서울\",\"tone\":\"친근한\"}')",
+      "Bash(curl -s -b cookieB.txt -X POST http://127.0.0.1:5000/api/brand-profile -H \"Content-Type: application/json\" -d '{\"brand_name\":\"B가게\",\"business_type\":\"음식점\",\"location\":\"부산\",\"tone\":\"전문적인\"}')",
+      "Bash(curl -s -b /tmp/cookieA.txt -X POST http://127.0.0.1:5000/api/brand-profile -H 'Content-Type: application/json' --data-binary '@C:\\\\Users\\\\master\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-master--gemini-antigravity-week-project\\\\248d1af9-b840-4253-8512-b7057e9c6728\\\\scratchpad/brandA.json')",
+      "Bash(curl -s -b /tmp/cookieB.txt -X POST http://127.0.0.1:5000/api/brand-profile -H 'Content-Type: application/json' --data-binary '@C:\\\\Users\\\\master\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-master--gemini-antigravity-week-project\\\\248d1af9-b840-4253-8512-b7057e9c6728\\\\scratchpad/brandB.json')",
+      "Bash(curl -s -b /tmp/cookieA.txt http://127.0.0.1:5000/api/brand-profile)",
+      "Bash(curl -s -b /tmp/cookieB.txt http://127.0.0.1:5000/api/brand-profile)",
+      "Bash(curl -s -b /tmp/cookieA.txt http://127.0.0.1:5000/api/me)",
+      "Bash(curl -s -b /tmp/cookieB.txt http://127.0.0.1:5000/api/me)",
+      "Bash(curl -s -b /tmp/cookieA.txt -c /tmp/cookieA.txt -X POST http://127.0.0.1:5000/api/logout)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -b /tmp/cookieA.txt http://127.0.0.1:5000/api/brand-profile)",
+      "Bash(powershell -NoProfile -Command 'Get-Process python -ErrorAction SilentlyContinue | Where-Object {$_.Path -like '\\\\''*week project*venv*'\\\\''} | Stop-Process -Force')",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(rm -f /tmp/cookieA.txt /tmp/cookieB.txt /tmp/server.log)",
+      "Bash(rm -f data/posts.db)"
+    ]
+  }
+}

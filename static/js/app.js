@@ -12,6 +12,7 @@ const state = {
   brandProfile: null,        // { brand_name, business_type, location, tone, description, signature_items, keywords } | null
   userEmail: '',
   loggedIn: false,
+  connectionStatus: {},
 };
 
 /* 서버가 메모리 부족 등으로 재시작되면 응답이 중간에 끊겨 res.json()이 그대로
@@ -623,6 +624,44 @@ function copyToClipboard() {
   navigator.clipboard.writeText(text).then(() => showToast('📋 클립보드에 복사됨', 'success'));
 }
 
+/* 요술봉 (AI 다듬기) */
+async function refineContentWithMagicWand() {
+  const editor = document.getElementById('editorArea');
+  const content = editor.value.trim();
+  if (!content) {
+    showToast('다듬을 원고가 없습니다.', 'error');
+    return;
+  }
+  const instruction = prompt('어떻게 다듬어 드릴까요?\n예) 더 유머러스하게, 사투리로 바꿔줘, 길이를 반으로 줄여줘', '친근한 말투로 더 자연스럽게 고쳐줘');
+  if (!instruction) return;
+  
+  const btn = document.getElementById('magicWandBtn');
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '✨ 다듬는 중...';
+  
+  try {
+    const res = await fetch('/api/refine-content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, instruction })
+    });
+    const data = await parseJsonResponse(res);
+    if (!data.success) throw new Error(data.error || '다듬기 실패');
+    
+    state.originalContent = editor.value; // 백업
+    await typeText(editor, data.data.content);
+    updateCharCounter();
+    document.getElementById('restoreBtn').disabled = false;
+    showToast('✨ 요술봉으로 원고를 성공적으로 다듬었습니다!', 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+  }
+}
+
 /* 텍스트 파일 다운로드 */
 function downloadText() {
   const text = document.getElementById('editorArea').value;
@@ -818,6 +857,7 @@ async function loadConnectionStatus() {
     const res = await fetch('/api/connection-status');
     const data = await parseJsonResponse(res);
     if (!data.success) return;
+    state.connectionStatus = data.data;
     Object.entries(data.data).forEach(([platform, connected]) => {
       const dot = document.getElementById(`conn-${platform}`);
       if (dot) dot.textContent = connected ? '🟢' : '🔴';
@@ -970,6 +1010,26 @@ function goToWizardStep(n) {
 
   if (n === 4) {
     autoGenerateIfNeeded();
+  } else if (n === 5) {
+    // 벤치마킹 반영: 연결 상태에 따라 다운로드 버튼 vs 게시 버튼 분기
+    const isConnected = state.connectionStatus[state.platform];
+    const publishCards = document.getElementById('publishChoiceCards');
+    if (!isConnected) {
+      publishCards.innerHTML = `
+        <button class="choice-card" onclick="downloadText()">
+          <span class="choice-icon">📥</span><span class="choice-label">원고 다운로드<br><small style="font-size:13px;color:var(--text-muted);font-weight:normal;">(SNS 계정 연결 시 예약/게시 가능)</small></span>
+        </button>
+      `;
+    } else {
+      publishCards.innerHTML = `
+        <button class="choice-card" onclick="chooseNow(this)">
+          <span class="choice-icon">🚀</span><span class="choice-label">지금 바로 올리기</span>
+        </button>
+        <button class="choice-card" onclick="chooseSchedule(this)">
+          <span class="choice-icon">📅</span><span class="choice-label">나중에 예약하기</span>
+        </button>
+      `;
+    }
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1384,3 +1444,27 @@ function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme') || 'dark';
   applyTheme(current === 'dark' ? 'light' : 'dark');
 }
+
+/* ───────────────────────────────────────────────────────
+   PWA 앱 설치 기능
+─────────────────────────────────────────────────────── */
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const installBtn = document.getElementById('installPwaBtn');
+  if (installBtn) installBtn.style.display = 'block';
+});
+
+async function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      const installBtn = document.getElementById('installPwaBtn');
+      if (installBtn) installBtn.style.display = 'none';
+    }
+    deferredPrompt = null;
+  }
+}
+
