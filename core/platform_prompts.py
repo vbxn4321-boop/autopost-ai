@@ -203,13 +203,30 @@ PLATFORM_PROMPTS = {
 
 
 def get_prompt(platform: str, topic: str, business_type: str = "음식점",
-               location: str = "서울", keywords: str = "", tone: str = "친근한") -> str:
-    """플랫폼에 맞는 프롬프트 반환 (변수 치환 포함)"""
+               location: str = "서울", keywords: str = "", tone: str = "친근한",
+               brand_name: str = "", description: str = "", signature_items: str = "") -> str:
+    """
+    플랫폼에 맞는 프롬프트 반환 (변수 치환 포함)
+
+    brand_name/description/signature_items가 있으면(브랜드 프로필이 설정된 경우)
+    실제 가게 정보를 프롬프트 맨 앞에 붙여서, AI가 추상적인 "카페" 대신
+    이 가게의 실제 소개·대표 메뉴를 반영해 글을 쓰도록 한다.
+    """
     template = PLATFORM_PROMPTS.get(platform)
     if not template:
         raise ValueError(f"지원하지 않는 플랫폼: {platform}")
 
-    return template.format(
+    brand_block = ""
+    if brand_name:
+        brand_block = (
+            "[우리 가게 정보 — 아래 정보를 실제로 반영해서 작성할 것]\n"
+            f"- 가게 이름: {brand_name}\n"
+            + (f"- 가게 소개: {description}\n" if description else "")
+            + (f"- 대표 메뉴/제품: {signature_items}\n" if signature_items else "")
+            + "\n"
+        )
+
+    return brand_block + template.format(
         topic=topic,
         business_type=business_type,
         location=location,

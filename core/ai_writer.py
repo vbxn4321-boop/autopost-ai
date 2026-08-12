@@ -19,6 +19,9 @@ def generate_content(
     location: str = "서울",
     keywords: str = "",
     tone: str = "친근한",
+    brand_name: str = "",
+    description: str = "",
+    signature_items: str = "",
 ) -> dict:
     """
     AI 원고 생성 메인 함수 (Google Gemini 사용)
@@ -30,6 +33,8 @@ def generate_content(
         location: 지역 (예: '강남구', '부산 해운대')
         keywords: 추가 SEO 키워드
         tone: 톤앤매너 (예: '친근한', '전문적인')
+        brand_name, description, signature_items: 브랜드 프로필이 설정되어 있으면
+            전달됨 — 실제 가게 이름/소개/대표 메뉴를 원고에 반영하기 위함
 
     Returns:
         dict: { title, caption, body, hashtags, full_post, platform }
@@ -50,6 +55,9 @@ def generate_content(
             location=location,
             keywords=keywords,
             tone=tone,
+            brand_name=brand_name,
+            description=description,
+            signature_items=signature_items,
         )
 
         # JSON 형식으로 응답 요청

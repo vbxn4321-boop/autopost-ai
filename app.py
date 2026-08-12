@@ -26,7 +26,10 @@ from config import (
     ALLOWED_VIDEO_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS, ALLOWED_AUDIO_EXTENSIONS,
     MAX_UPLOAD_SIZE_MB, PLATFORM_SETTINGS, PLANS,
 )
-from core.db import init_db, create_scheduled_post, get_all_scheduled_posts, delete_scheduled_post, save_oauth_token, get_oauth_token
+from core.db import (
+    init_db, create_scheduled_post, get_all_scheduled_posts, delete_scheduled_post,
+    save_oauth_token, get_oauth_token, get_brand_profile, save_brand_profile,
+)
 from core.ai_writer import generate_content
 
 # ─── Flask 앱 초기화 ──────────────────────────────────────────
@@ -71,6 +74,44 @@ def index():
     return render_template("index.html", platforms=PLATFORM_SETTINGS)
 
 
+# ─── API: 브랜드 프로필 (최초 1회 설정, 이후 모든 원고 생성에 자동 반영) ────
+
+@app.route("/api/brand-profile", methods=["GET"])
+def api_get_brand_profile():
+    """저장된 브랜드 프로필 조회. 없으면 data: null (프론트에서 최초 방문 여부 판단에 사용)"""
+    profile = get_brand_profile()
+    return jsonify({"success": True, "data": profile})
+
+
+@app.route("/api/brand-profile", methods=["POST"])
+def api_save_brand_profile():
+    """브랜드 프로필 저장/수정"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "JSON 데이터가 필요합니다"}), 400
+
+        brand_name = data.get("brand_name", "").strip()
+        if not brand_name:
+            return jsonify({"success": False, "error": "가게 이름을 입력해주세요"}), 400
+
+        save_brand_profile(
+            brand_name=brand_name,
+            business_type=data.get("business_type", "카페"),
+            location=data.get("location", "서울"),
+            tone=data.get("tone", "친근한"),
+            description=data.get("description", ""),
+            signature_items=data.get("signature_items", ""),
+            keywords=data.get("keywords", ""),
+        )
+
+        return jsonify({"success": True, "data": get_brand_profile()})
+
+    except Exception as e:
+        print(f"[API /brand-profile 오류] {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 # ─── API: 원고 생성 ──────────────────────────────────────────
 
 @app.route("/api/generate", methods=["POST"])
@@ -112,6 +153,11 @@ def api_generate():
         if not topic:
             return jsonify({"success": False, "error": "주제를 입력해주세요"}), 400
 
+        # 브랜드 프로필이 설정되어 있으면 가게 이름/소개/대표 메뉴를 자동으로 반영,
+        # 키워드는 요청에 없을 때만 프로필 값으로 보충
+        brand = get_brand_profile() or {}
+        keywords = keywords or brand.get("keywords", "")
+
         result = generate_content(
             topic=topic,
             platform=platform,
@@ -119,6 +165,9 @@ def api_generate():
             location=location,
             keywords=keywords,
             tone=tone,
+            brand_name=brand.get("brand_name", ""),
+            description=brand.get("description", ""),
+            signature_items=brand.get("signature_items", ""),
         )
 
         # 횟수 증가

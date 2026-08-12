@@ -9,6 +9,7 @@ const state = {
   selectedBGM: 'none',       // 'none' | 'custom'
   customBgmPath: null,
   bgmVolume: 0.3,
+  brandProfile: null,        // { brand_name, business_type, location, tone, description, signature_items, keywords } | null
 };
 
 /* 서버가 메모리 부족 등으로 재시작되면 응답이 중간에 끊겨 res.json()이 그대로
@@ -87,10 +88,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   renderTimeline();
-  loadScheduledPosts();
   loadConnectionStatus();
   updateCharCounter();
   syncThemeToggleIcon();
+  initApp();
   // 마법사 스텝은 시작 화면(wizardIntro)에서 "시작하기"를 눌러야 진입함 — startWizard() 참고
 });
 
@@ -984,15 +985,6 @@ function updateNextButton() {
   }
 }
 
-/* 시작화면과 각 스텝이 같은 하단 버튼을 공유 — 지금 보이는 화면에 맞는 동작으로 분기 */
-function handleWizardNavClick() {
-  if (document.getElementById('wizardIntro').classList.contains('active')) {
-    startWizard();
-  } else {
-    nextStep();
-  }
-}
-
 function onTopicInput() {
   if (currentStep === 2) updateNextButton();
 }
@@ -1059,7 +1051,8 @@ function showWizardComplete(message) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function restartWizard() {
+/* 완료 화면 "홈으로 가기" — 다음 게시물을 위해 상태를 깨끗이 하고 홈 화면으로 복귀 */
+function goHome() {
   state.platform = 'instagram';
   state.timeline = [];
   state.originalContent = '';
@@ -1086,15 +1079,110 @@ function restartWizard() {
 
   document.getElementById('wizardComplete').classList.remove('active');
   document.getElementById('wizardBackBtn').style.visibility = 'visible';
-  goToWizardStep(1);
+  document.getElementById('wizardTopbar').style.display = 'none';
+
+  showHomeScreen();
 }
 
 /* ───────────────────────────────────────────────────────
-   시작 화면 → 마법사 진입
+   시작 화면 / 브랜드 설정 / 홈 화면
 ─────────────────────────────────────────────────────── */
+
+/* 앱 처음 로드 시: 브랜드 프로필이 있으면 바로 홈으로, 없으면 인트로(HTML 기본 상태)를 그대로 둠 */
+async function initApp() {
+  try {
+    const res = await fetch('/api/brand-profile');
+    const data = await parseJsonResponse(res);
+    state.brandProfile = data.success ? data.data : null;
+  } catch (err) {
+    state.brandProfile = null;
+  }
+
+  if (state.brandProfile) {
+    showHomeScreen();
+  }
+}
+
+function goToBrandSetup() {
+  document.querySelectorAll('.wizard-intro').forEach(el => el.classList.remove('active'));
+  document.getElementById('brandSetup').classList.add('active');
+}
+
+/* 홈 화면의 "✏️ 수정" — 기존 값 채워서 브랜드 설정 화면 다시 열기 */
+function openBrandSetupForEdit() {
+  const p = state.brandProfile || {};
+  document.getElementById('brandNameInput').value = p.brand_name || '';
+  document.getElementById('brandBusinessType').value = p.business_type || '카페';
+  document.getElementById('brandLocation').value = p.location || '서울';
+  document.getElementById('brandTone').value = p.tone || '친근한';
+  document.getElementById('brandDescription').value = p.description || '';
+  document.getElementById('brandSignatureItems').value = p.signature_items || '';
+  goToBrandSetup();
+}
+
+async function saveBrandProfile() {
+  const brandName = document.getElementById('brandNameInput').value.trim();
+  if (!brandName) {
+    showToast('가게 이름을 입력해주세요', 'error');
+    document.getElementById('brandNameInput').focus();
+    return;
+  }
+
+  const btn = document.getElementById('brandSetupSaveBtn');
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '저장 중...';
+
+  try {
+    const res = await fetch('/api/brand-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        brand_name: brandName,
+        business_type: document.getElementById('brandBusinessType').value,
+        location: document.getElementById('brandLocation').value,
+        tone: document.getElementById('brandTone').value,
+        description: document.getElementById('brandDescription').value.trim(),
+        signature_items: document.getElementById('brandSignatureItems').value.trim(),
+      }),
+    });
+    const data = await parseJsonResponse(res);
+    if (!data.success) throw new Error(data.error || '저장 실패');
+
+    state.brandProfile = data.data;
+    showToast('✅ 가게 정보가 저장됐어요!', 'success');
+    showHomeScreen();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+function showHomeScreen() {
+  document.querySelectorAll('.wizard-intro').forEach(el => el.classList.remove('active'));
+  document.getElementById('homeScreen').classList.add('active');
+
+  const p = state.brandProfile || {};
+  document.getElementById('homeBrandName').textContent = p.brand_name || '';
+  document.getElementById('homeBrandMeta').textContent = [p.business_type, p.location].filter(Boolean).join(' · ');
+
+  loadScheduledPosts();
+}
+
+/* 시작 화면/브랜드설정/홈 화면 → 마법사 진입 (업종/지역/톤은 브랜드 프로필값으로 미리 채움) */
 function startWizard() {
-  document.getElementById('wizardIntro').classList.remove('active');
+  document.querySelectorAll('.wizard-intro').forEach(el => el.classList.remove('active'));
   document.getElementById('wizardTopbar').style.display = 'flex';
+
+  const p = state.brandProfile;
+  if (p) {
+    if (p.business_type) document.getElementById('businessType').value = p.business_type;
+    if (p.location) document.getElementById('locationInput').value = p.location;
+    if (p.tone) document.getElementById('toneInput').value = p.tone;
+  }
+
   goToWizardStep(1);
 }
 

@@ -96,6 +96,22 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    # 브랜드 프로필 테이블 — 사업장 1개 기준 싱글톤(id=1). 최초 1회 입력해두면
+    # 이후 모든 원고 생성 시 이 정보(가게 이름·소개·대표 메뉴 등)를 자동으로 반영한다.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS brand_profile (
+            id              INTEGER PRIMARY KEY CHECK (id = 1),
+            brand_name      TEXT,
+            business_type   TEXT,
+            location        TEXT,
+            tone            TEXT,
+            description     TEXT,
+            signature_items TEXT,
+            keywords        TEXT,
+            updated_at      DATETIME
+        )
+    """)
+
     conn.commit()
     conn.close()
     print("[DB] 초기화 완료:", DB_PATH)
@@ -254,6 +270,41 @@ def get_oauth_token(platform):
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+# ─── 브랜드 프로필 CRUD (싱글톤, id=1) ───────────────────────
+
+def get_brand_profile():
+    """저장된 브랜드 프로필 조회 (아직 설정 전이면 None — 첫 방문 여부 판단에 사용)"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM brand_profile WHERE id = 1")
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def save_brand_profile(brand_name, business_type, location, tone,
+                        description="", signature_items="", keywords=""):
+    """브랜드 프로필 저장/수정 (upsert)"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO brand_profile
+            (id, brand_name, business_type, location, tone, description, signature_items, keywords, updated_at)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(id) DO UPDATE SET
+            brand_name = excluded.brand_name,
+            business_type = excluded.business_type,
+            location = excluded.location,
+            tone = excluded.tone,
+            description = excluded.description,
+            signature_items = excluded.signature_items,
+            keywords = excluded.keywords,
+            updated_at = CURRENT_TIMESTAMP
+    """, (brand_name, business_type, location, tone, description, signature_items, keywords))
+    conn.commit()
+    conn.close()
 
 
 if __name__ == "__main__":

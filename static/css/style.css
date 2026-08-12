@@ -1103,6 +1103,26 @@ body.wizard-body {
 .intro-feature-icon { font-size: 26px; }
 .intro-feature-label { font-size: 11.5px; font-weight: 600; color: var(--text-primary); line-height: 1.4; }
 
+/* 인트로/브랜드설정/홈 화면 전용 큰 CTA 버튼 (마법사 스텝의 하단 고정바와 별개) */
+.intro-start-btn {
+  width: 100%;
+  max-width: 360px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--gradient-main);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 8px 24px rgba(139,92,246,0.35);
+  margin-top: 8px;
+}
+.intro-start-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(139,92,246,0.5); }
+.intro-start-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
 /* 화면이 열리면 위에서부터 순서대로 슥- 하고 나타나는 연출 */
 .intro-anim {
   opacity: 0;
